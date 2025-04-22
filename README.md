@@ -14,20 +14,23 @@ It then generates a polished Excel report based on your standard review template
 
 ## Table of Contents
 
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Workflow](#workflow)
-- [Tests](#tests)
-- [Deployment & Scheduling](#deployment--scheduling)
-- [Contributing](#contributing)
-- [Changelog](#changelog)
-- [License](#license)
-- [Authors & Acknowledgements](#authors--acknowledgements)
-- [Contact & Support](#contact--support)
+- [Gatekeeper](#gatekeeper)
+  - [Description](#description)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Usage](#usage)
+  - [Project Structure](#project-structure)
+  - [Workflow](#workflow)
+  - [Tests](#tests)
+  - [Deployment \& Scheduling](#deployment--scheduling)
+  - [Contributing](#contributing)
+  - [Changelog](#changelog)
+  - [License](#license)
+  - [Authors \& Acknowledgements](#authors--acknowledgements)
+  - [Contact \& Support](#contact--support)
 
 ## Features
 
@@ -69,13 +72,24 @@ It then generates a polished Excel report based on your standard review template
   ```
   gatekeeper/
   ├── data/  
-  │   ├── rh_reference.xlsx        # official HR directory  
-  │   ├── app1_users.xlsx          # application extraction(s)  
-  ├── data_templates/  
-  │   └── template_revue.xlsx      # review template with headers & dropdowns  
-  ├── outputs/  
-  ├── logs/  
-  └── scripts/  
+  │   ├── rh_reference.xlsx
+  │   ├── app1_users.xlsx
+  ├── data_templates/
+  │   └── template_revue.xlsx
+  ├── outputs/
+  ├── logs/
+  ├── scripts/
+  │   ├── excel_loader.py
+  │   ├── comparator.py
+  │   ├── report_generator.py
+  │   └── main.py
+  ├── tests/                    # unit tests for each module
+  │   ├── test_excel_loader.py
+  │   ├── test_comparator.py
+  │   ├── test_report_generator.py
+  │   └── test_main.py
+  ├── requirements.txt
+  └── README.md
   ```
 - **Options**:
   - `--rh` : path to your RH file
@@ -97,16 +111,21 @@ python scripts/main.py   --rh data/rh_reference.xlsx   --ext data/app1_users.xls
 
 ```
 gatekeeper/
-├── data/  
-├── data_templates/  
-├── outputs/  
-├── logs/  
-├── scripts/  
-│   ├── excel_loader.py       # load & clean Excel data  
-│   ├── comparator.py         # classify accounts (In/Out/Dormant/Never)  
-│   ├── report_generator.py   # insert into review template  
-│   └── main.py               # orchestrator & CLI interface  
-├── requirements.txt  
+├── data/
+├── data_templates/
+├── outputs/
+├── logs/
+├── scripts/
+│   ├── excel_loader.py       # load & clean Excel data
+│   ├── comparator.py         # classify accounts (In/Out/Dormant/Never)
+│   ├── report_generator.py   # insert into review template
+│   └── main.py               # orchestrator & CLI interface
+├── tests/
+│   ├── test_excel_loader.py
+│   ├── test_comparator.py
+│   ├── test_report_generator.py
+│   └── test_main.py
+├── requirements.txt
 └── README.md
 ```
 
@@ -122,14 +141,20 @@ gatekeeper/
 
 ## Tests
 
-*(If you add tests)*  
+Run all unit tests:
+
 ```bash
 pytest tests/
 ```
 
+- **test_excel_loader.py**: verifies loading and cleaning logic.
+- **test_comparator.py**: checks classification of accounts.
+- **test_report_generator.py**: ensures report creation matches template.
+- **test_main.py**: validates the CLI interface and overall execution.
+
 ## Deployment & Scheduling
 
-- **Linux (cron)**:  
+- **Linux (cron)**:
   ```cron
   0 6 1 * * /path/to/gatekeeper/.venv/bin/python /path/to/gatekeeper/scripts/main.py --rh /path/to/data/rh_reference.xlsx --ext /path/to/data/app1_users.xlsx
   ```
@@ -137,10 +162,10 @@ pytest tests/
 
 ## Contributing
 
-1. Fork the repo  
-2. Create a feature branch (`git checkout -b feature/XYZ`)  
-3. Commit your changes (`git commit -m "Add XYZ"`)  
-4. Push (`git push origin feature/XYZ`)  
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/XYZ`)
+3. Commit your changes (`git commit -m "Add XYZ"`)
+4. Push (`git push origin feature/XYZ`)
 5. Open a Pull Request
 
 Please follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) for code style.
@@ -155,7 +180,7 @@ This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for d
 
 ## Authors & Acknowledgements
 
-- **Your Name** – Initial development  
+- **Your Name** – Initial development
 - **Contributors** – Thank you for your contributions!
 
 ## Contact & Support
