@@ -1,0 +1,7 @@
+inactivity_threshold_days: 120
+column_mappings:
+  code_utilisateur: ["code utilisateur", "cuti", "identifiant utilisateur"]
+  nom: ["nom"]
+  prenom: ["prénom", "prenom"]
+  direction: ["direction"]
+  derniere_connexion: ["date dernière connexion", "last_login"]
