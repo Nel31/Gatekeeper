@@ -1,5 +1,0 @@
-# Ignorer les sorties et caches
-outputs/
-logs/
-/__pycache__/
-*.pyc
