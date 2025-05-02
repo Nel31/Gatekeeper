@@ -89,3 +89,125 @@ python gatekeeper_pipeline.py --rh-file RH.xlsx --ext-file ext.xlsx --template t
 
 ## Licence
 MIT
+ALGORITHM GatekeeperPipeline
+INPUT:
+    rh_file            // chemin vers le fichier Excel RH
+    ext_file           // chemin vers le fichier Excel d’extraction
+    template_path      // chemin vers le template Excel de revue
+    output_path        // chemin pour le fichier Excel de revue final
+    certificateur      // nom du certificateur
+    email_list (opt.)  // chemin vers le fichier TXT d’adresses mail
+    flags: { only_insgb, only_outsgb, use_outlook }
+
+BEGIN
+1. ── CHARGEMENT & VALIDATION ─────────────────────────────────────────────
+   1.1 rh_df ← READ_EXCEL(rh_file)
+       // Charger le référentiel RH
+
+   1.2 ext_df ← READ_EXCEL(ext_file)
+       // Charger l’extraction applicative
+
+   1.3 CALL validate_rh_dataframe(rh_df)
+       ▸ Normaliser les entêtes (unidecode + minuscules + suppression non alphanum)
+       ▸ Renommer selon les alias RH attendus
+       ▸ ERREUR si colonnes manquantes
+
+   1.4 CALL validate_dataframe(ext_df)
+       ▸ Normaliser les entêtes de la même manière
+       ▸ Renommer selon les alias d’extraction attendus
+       ▸ ERREUR si colonnes manquantes
+
+2. ── NETTOYAGE & FILTRAGE ────────────────────────────────────────────────
+   FOR each col IN {lib, lputi, status} DO
+       ext_df[col] ← to_lower(strip(unidecode(ext_df[col])));
+   END FOR
+
+   ext_df.last_login      ← PARSE_DATE(ext_df.last_login)
+   ext_df.extraction_date ← PARSE_DATE(ext_df.extraction_date)
+
+   ext_df ← FILTER ext_df WHERE status ≠ 'suspendu'
+
+3. ── AGRÉGATION & ANOMALIES ───────────────────────────────────────────────
+   summary_df ← GROUP ext_df BY cuti:
+       last_login      = MAX(last_login)
+       extraction_date = FIRST(extraction_date)
+       lib_anomaly     = (COUNT_UNIQUE(lib) > 1)
+       lputi_extracted = FIRST(lputi)
+       lputi_anomaly   = (COUNT_UNIQUE(lputi) > 1)
+       status_anomaly  = (COUNT_UNIQUE(status) > 1)
+   END GROUP
+
+4. ── FUSION RH ↔ EXT ─────────────────────────────────────────────────────
+   merged ← LEFT_MERGE(summary_df, rh_df, on=(cuti = rh_id), indicator=_merge)
+
+   FOR each row IN merged DO
+       IF row._merge = 'both' THEN
+           row.category ← 'in_sgb'
+       ELSE
+           row.category ← 'out_sgb'
+       END IF
+
+       IF row.last_login IS NULL THEN
+           row.days_inactive ← +∞
+       ELSE
+           row.days_inactive ← DAYS_BETWEEN(row.extraction_date, row.last_login)
+       END IF
+   END FOR
+
+5. ── DÉTECTION DES DOUBLONS ───────────────────────────────────────────────
+   in_sgb_rows ← FILTER merged WHERE category = 'in_sgb'
+   IF ANY DUPLICATE([r.last_name + " " + r.first_name FOR r IN in_sgb_rows]) THEN
+       PRINT "Doublons détectés" AND EXIT(84)
+   END IF
+
+6. ── CONSTRUCTION DU RAPPORT ───────────────────────────────────────────────
+   report_rows ← EMPTY LIST
+
+   FOR each row IN merged DO
+       INITIALISE les champs du rapport
+
+       IF row.category = 'in_sgb' THEN
+           // Données RH pour internes
+           SET nom_prenom, profil, direction
+
+           // Décision automatique
+           IF row.days_inactive > SETTINGS.threshold_days_inactive THEN
+               décision = "A désactiver"
+           ELSE
+               décision = "A conserver"
+           END IF
+
+           // Exécution
+           IF décision = "A désactiver" THEN
+               exécution = "Désactivé"
+           ELSE
+               score ← FUZZY_SCORE(profil, row.lputi_extracted)
+               IF score < 85 THEN
+                   exécution = "Modifié"
+               ELSE
+                   exécution = "Conservé"
+               END IF
+           END IF
+       END IF
+
+       APPEND to report_rows
+   END FOR
+
+7. ── INJECTION DANS LE TEMPLATE EXCEL ─────────────────────────────────────
+   wb ← LOAD_WORKBOOK(template_path)
+   ws ← wb.active
+   header_map ← {NORMALIZE(cell.value): cell.column FOR cell IN ws[1]}
+
+   FOR i FROM 0 TO report_df.ROWS – 1 DO
+       WRITE chaque valeur du report_df dans la cellule correspondante
+   END FOR
+
+   wb.save(output_path)
+
+8. ── FLUX MAIL OUT SGB (optionnel) ────────────────────────────────────────
+   IF do_outsgb AND email_list IS PROVIDED THEN
+       POUR chaque adresse DANS email_list:
+           CRÉER et ENVOYER un mail Outlook avec pièce jointe
+   END IF
+
+END ALGORITHM
