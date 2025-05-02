@@ -1,156 +1,218 @@
-<span class="kw">ALGORITHM</span> GatekeeperPipeline
-<span class="kw">INPUT</span>:
-    <span class="value">rh_file</span>            // chemin vers le fichier Excel RH
-    <span class="value">ext_file</span>           // chemin vers l’extraction applicative
-    <span class="value">template_path</span>      // chemin vers le template Excel de revue
-    <span class="value">output_path</span>        // chemin pour le fichier Excel final
-    <span class="value">certificateur</span>      // nom du certificateur
-    <span class="value">email_list</span> (opt.)  // fichier TXT d’adresses mail
-    <span class="value">flags</span>              // { only_insgb, only_outsgb, use_outlook }
+# Algorithme Gatekeeper
 
-<span class="kw">BEGIN</span>
+Ce document présente en **pseudocode structuré** toutes les étapes du pipeline Gatekeeper, de la lecture des fichiers à l’envoi des mails Out SGB.
 
-1. ── <span class="kw">CHARGEMENT & VALIDATION</span> ─────────────────────────────────
-   1.1 rh_df ← READ_EXCEL(rh_file)  <span class="comment">// Charger le référentiel RH</span>
-   1.2 ext_df ← READ_EXCEL(ext_file) <span class="comment">// Charger l’extraction</span>
+## Table des matières
+
+1. [Introduction](#introduction)
+2. [Pseudocode complet](#pseudocode-complet)
+
+   1. [Chargement & validation](#1-chargement--validation)
+   2. [Nettoyage & filtrage](#2-nettoyage--filtrage)
+   3. [Agrégation & anomalies](#3-agrégation--anomalies)
+   4. [Fusion RH ↔ Extraction](#4-fusion-rh--extraction)
+   5. [Détection des doublons](#5-détection-des-doublons)
+   6. [Construction du rapport](#6-construction-du-rapport)
+   7. [Injection dans le template Excel](#7-injection-dans-le-template-excel)
+   8. [Flux mail Out SGB (optionnel)](#8-flux-mail-out-sgb-optionnel)
+
+## Introduction
+
+Gatekeeper est un pipeline d’audit des comptes utilisateurs qui :
+
+* Contrôle et nettoie les données d’un référentiel RH et d’une extraction applicative.
+* Détecte anomalies et doublons.
+* Génère un rapport unique (In SGB + Out SGB) conforme à un template Excel.
+* En option, envoie automatiquement les demandes de certification par Outlook.
+
+---
+
+## Pseudocode complet
+
+```plaintext
+ALGORITHM GatekeeperPipeline
+INPUT:
+    rh_file            // chemin vers le fichier Excel RH
+    ext_file           // chemin vers le fichier Excel d’extraction
+    template_path      // chemin vers le template Excel de revue
+    output_path        // chemin pour le fichier Excel de revue final
+    certificateur      // nom du certificateur
+    email_list (opt.)  // chemin vers le fichier TXT d’adresses mail
+    flags: { only_insgb, only_outsgb, use_outlook }
+
+BEGIN
+1. ── CHARGEMENT & VALIDATION ─────────────────────────────────────────────────
+   1.1 rh_df ← READ_EXCEL(rh_file)  
+       // Charger le référentiel RH
+
+   1.2 ext_df ← READ_EXCEL(ext_file)  
+       // Charger l’extraction applicative
 
    1.3 CALL validate_rh_dataframe(rh_df)
        ▸ Normaliser entêtes (unidecode + minuscules + suppression non alphanum)
-       ▸ Renommer selon les alias RH attendus
+       ▸ Renommer selon alias RH attendus
        ▸ ERREUR si colonnes manquantes
 
    1.4 CALL validate_dataframe(ext_df)
-       ▸ Normaliser entêtes
-       ▸ Renommer selon les alias d’extraction
+       ▸ Normaliser entêtes de la même manière
+       ▸ Renommer selon alias d’extraction attendus
        ▸ ERREUR si colonnes manquantes
 
-2. ── <span class="kw">NETTOYAGE & FILTRAGE</span> ─────────────────────────────────
-   <span class="kw">FOR</span> each col IN {lib, lputi, status} <span class="kw">DO</span>
-       ext_df[col] ← to_lower(strip(unidecode(ext_df[col])))  <span class="comment">// Uniformiser texte</span>
-   <span class="kw">END FOR</span>
+2. ── NETTOYAGE & FILTRAGE ────────────────────────────────────────────────────
+   FOR each col IN {lib, lputi, status} DO
+       ext_df[col] ← to_lower(strip(unidecode(ext_df[col])))
+       // Uniformiser le texte et supprimer accents
+   END FOR
 
-   ext_df.last_login      ← PARSE_DATE(ext_df.last_login)      <span class="comment">// Convertir en date</span>
+   ext_df.last_login      ← PARSE_DATE(ext_df.last_login)
+       // Convertir en date
    ext_df.extraction_date ← PARSE_DATE(ext_df.extraction_date)
 
-   ext_df ← FILTER ext_df WHERE status ≠ 'suspendu'          <span class="comment">// Supprimer suspendus</span>
+   ext_df ← FILTER ext_df WHERE status ≠ 'suspendu'
+       // Retirer les comptes suspendus
 
-3. ── <span class="kw">AGRÉGATION & ANOMALIES</span> ──────────────────────────────
+3. ── AGRÉGATION & ANOMALIES ─────────────────────────────────────────────────
    summary_df ← GROUP ext_df BY cuti:
-       last_login      = MAX(last_login)      <span class="comment">// Plus récente</span>
-       extraction_date = FIRST(extraction_date) <span class="comment">// Unique</span>
+       last_login      = MAX(last_login)
+           // Date de dernière connexion la plus récente
+       extraction_date = FIRST(extraction_date)
+           // Date d’extraction unique
        lib_anomaly     = (COUNT_UNIQUE(lib) > 1)
+           // Plusieurs libellés différents ?
        lputi_extracted = FIRST(lputi)
+           // Conserver le premier intitulé métier
        lputi_anomaly   = (COUNT_UNIQUE(lputi) > 1)
+           // Anomalie sur l’intitulé métier ?
        status_anomaly  = (COUNT_UNIQUE(status) > 1)
-   <span class="kw">END GROUP</span>
+           // Anomalie sur le statut ?
+   END GROUP
 
-4. ── <span class="kw">FUSION RH ↔ EXT</span> ─────────────────────────────────
-   merged ← LEFT_MERGE(summary_df, rh_df, on=(cuti=rh_id), indicator=_merge)
+4. ── FUSION RH ↔ EXTRACTION ─────────────────────────────────────────────────
+   merged ← LEFT_MERGE(summary_df, rh_df, on=(cuti = rh_id), indicator=_merge)
+       // Conserver tous les comptes, marquer In/Out SGB
 
-   <span class="kw">FOR</span> each row IN merged <span class="kw">DO</span>
-       <span class="kw">IF</span> row._merge = 'both' <span class="kw">THEN</span>
+   FOR each row IN merged DO
+       IF row._merge = 'both' THEN
            row.category ← 'in_sgb'
-       <span class="kw">ELSE</span>
+       ELSE
            row.category ← 'out_sgb'
-       <span class="kw">END IF</span>
+       END IF
 
-       <span class="comment">// Calcul des jours d’inactivité</span>
-       <span class="kw">IF</span> row.last_login IS NULL <span class="kw">THEN</span>
-           row.days_inactive ← +∞                <span class="comment">// Jamais utilisé</span>
-       <span class="kw">ELSE</span>
+       // Calcul du nombre de jours d’inactivité
+       IF row.last_login IS NULL THEN
+           row.days_inactive ← +∞   // Jamais utilisé
+       ELSE
            row.days_inactive ← DAYS_BETWEEN(row.extraction_date, row.last_login)
-       <span class="kw">END IF</span>
-   <span class="kw">END FOR</span>
+       END IF
+   END FOR
 
-5. ── <span class="kw">DÉTECTION DES DOUBLONS</span> ────────────────────────────
-   in_sgb_rows ← FILTER merged WHERE category='in_sgb'
+5. ── DÉTECTION DES DOUBLONS ─────────────────────────────────────────────────
+   in_sgb_rows ← FILTER merged WHERE category = 'in_sgb'
    full_names  ← [r.last_name + " " + r.first_name FOR r IN in_sgb_rows]
-   <span class="kw">IF ANY</span> DUPLICATE(full_names) <span class="kw">THEN</span>
+   IF ANY DUPLICATE(full_names) THEN
        PRINT "Doublons détectés" AND EXIT(84)
-   <span class="kw">END IF</span>
+       // Arrêt si un même collaborateur a plusieurs comptes
+   END IF
 
-6. ── <span class="kw">CONSTRUCTION DU RAPPORT</span> ─────────────────────────────
+6. ── CONSTRUCTION DU RAPPORT ────────────────────────────────────────────────
    report_rows ← EMPTY LIST
 
-   <span class="kw">FOR</span> each r IN merged <span class="kw">DO</span>
+   FOR each row IN merged DO
        // Initialisation des champs
-       code_utilisateur = r.cuti
-       nom_prenom       = ""
-       profil           = ""
-       direction        = ""
-       recommandation   = "A certifier"
-       commentaire_revue = ""
-       certificateur    = certificateur
-       décision         = ""
-       exécution        = ""
-       exécuté_par      = ""
-       commentaire_exécution = ""
+       code_utilisateur      ← row.cuti
+       nom_prenom            ← ""
+       profil                ← ""
+       direction             ← ""
+       recommandation        ← "A certifier"
+       commentaire_revue     ← ""
+       certificateur_field   ← certificateur
+       décision              ← ""
+       exécution             ← ""
+       exécuté_par           ← ""
+       commentaire_exécution ← ""
 
-       <span class="kw">IF</span> r.category = 'in_sgb' <span class="kw">THEN</span>
-           nom_prenom = r.last_name + " " + r.first_name
-           profil     = r.position
-           direction  = r.direction
+       IF row.category = 'in_sgb' THEN
+           // Données RH pour les internes
+           nom_prenom ← row.last_name + " " + row.first_name
+           profil     ← row.position
+           direction  ← row.direction
 
            // Décision automatique
-           <span class="kw">IF</span> r.days_inactive > SETTINGS.threshold_days_inactive <span class="kw">THEN</span>
+           IF row.days_inactive > SETTINGS.threshold_days_inactive THEN
                décision = "A désactiver"
-           <span class="kw">ELSE</span>
+           ELSE
                décision = "A conserver"
-           <span class="kw">END IF</span>
+           END IF
 
-           // Exécution priorise désactivation
-           <span class="kw">IF</span> décision = "A désactiver" <span class="kw">THEN</span>
+           // Exécution priorise la désactivation
+           IF décision = "A désactiver" THEN
                exécution = "Désactivé"
-           <span class="kw">ELSE</span>
-               score = FUZZY_SCORE(profil, r.lputi_extracted)
-               <span class="kw">IF</span> score < 85 <span class="kw">THEN</span>
+           ELSE
+               // Fuzzy-match profil vs extrait
+               score ← FUZZY_SCORE(profil, row.lputi_extracted)
+               IF score < 85 THEN
                    exécution = "Modifié"
-               <span class="kw">ELSE</span>
+               ELSE
                    exécution = "Conservé"
-               <span class="kw">END IF</span>
-           <span class="kw">END IF</span>
-       <span class="kw">END IF</span>
+               END IF
+           END IF
+       END IF
+       // Pour out_sgb, décision/exécution restent vides (manuel)
 
-       APPEND(report_rows, (...))
-   <span class="kw">END FOR</span>
+       APPEND to report_rows:
+           (code_utilisateur, nom_prenom, profil, direction,
+            recommandation, commentaire_revue, certificateur_field,
+            décision, exécution, exécuté_par, commentaire_exécution)
+   END FOR
 
-   report_df ← DATAFRAME(report_rows, columns=[...])
+   report_df ← DATAFRAME(report_rows, columns=[
+       code_utilisateur, nom_prenom, profil, direction,
+       recommandation, commentaire_revue, certificateur,
+       décision, exécution, exécuté_par, commentaire_exécution
+   ])
 
-7. ── <span class="kw">INJECTION DANS EXCEL</span> ───────────────────────────────
+7. ── INJECTION DANS LE TEMPLATE EXCEL ───────────────────────────────────────
    wb ← LOAD_WORKBOOK(template_path)
    ws ← wb.active
-   header_map ← {NORMALIZE(c.value):c.column FOR c IN ws[1]}
+   header_map ← {NORMALIZE(cell.value): cell.column FOR cell IN ws[1]}
 
-   <span class="kw">FOR</span> i FROM 0 TO report_df.rows-1 <span class="kw">DO</span>
-       <span class="kw">FOR</span> each (col,value) IN report_df.row(i) <span class="kw">DO</span>
-           hdr       = TEMPLATE_HEADER[col]
-           col_index = header_map[NORMALIZE(hdr)]
-           ws.cell(row=i+2,col=col_index,value=value)
-       <span class="kw">END FOR</span>
-   <span class="kw">END FOR</span>
+   FOR i FROM 0 TO report_df.ROWS - 1 DO
+       FOR each (col_name, value) IN report_df.row(i) DO
+           hdr ← TEMPLATE_HEADER[col_name]
+           col_index ← header_map[NORMALIZE(hdr)]
+           ws.cell(row=i+2, column=col_index, value=value)
+       END FOR
+   END FOR
+   wb.save(output_path)
+       // Rapport final prêt
 
-   wb.save(output_path)  <span class="comment">// Fichier final</span>
+8. ── FLUX MAIL OUT SGB (OPTIONNEL) ─────────────────────────────────────────
+   IF do_outsgb AND email_list IS PROVIDED THEN
+       addresses ← READ_LINES(email_list)
+       OUTLOOK ← INIT_OUTLOOK_COM()
+       FOR each addr IN addresses DO
+           mail ← OUTLOOK.CreateItem()
+           mail.To      ← addr
+           mail.Subject ← "Validation comptes externes – " + certificateur
+           mail.Body    ← <<message standard>>
 
-8. ── <span class="kw">FLUX MAIL OUT SGB</span> (optionnel) ─────────────────────
-   <span class="kw">IF</span> do_outsgb AND email_list PROVIDED <span class="kw">THEN</span>
-       addresses = READ_LINES(email_list)
-       outlook = INIT_OUTLOOK_COM()
-       <span class="kw">FOR</span> each addr IN addresses <span class="kw">DO</span>
-           mail = outlook.CreateItem()
-           mail.To      = addr
-           mail.Subject = "Validation comptes externes – " + certificateur
-           mail.Body    = <<message standard>>
+           attachment_path ← PATH_JOIN("outsgb", addr + ".xlsx")
+           mail.Attachments.Add(attachment_path)
+               // Pièce jointe automatique
 
-           attachment = PATH_JOIN("outsgb", addr+".xlsx")
-           mail.Attachments.Add(attachment)
-
-           <span class="kw">TRY</span>
+           TRY
                mail.Send()
-               LOG_SEND_RESULT(addr,"Succès","")
-           <span class="kw">CATCH</span> e
-               LOG_SEND_RESULT(addr,"Échec",e.message)
-           <span class="kw">END TRY</span>
-       <span class="kw">END FOR</span>
-   <span class="kw">END IF</span>
+               status, error ← "Succès", ""
+           CATCH e
+               status, error ← "Échec", e.message
+           END TRY
 
-<span class="kw">END ALGORITHM</span>
+           LOG_SEND_RESULT(addr, status, error)
+               // Journalisation dans outlook_send_log.csv
+       END FOR
+   END IF
+
+END ALGORITHM
+```
+
+*Fins du document.*
