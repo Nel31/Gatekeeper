@@ -1,9 +1,9 @@
-# Gatekeeper Pipeline (version simplifiée)
+# Gatekeeper
 
-Ce document présente la version simplifiée de l'algorithme Gatekeeper en pseudocode.
+Ce document présente l'algorithme Gatekeeper en pseudocode.
 
 ```plaintext
-ALGORITHME GatekeeperSimplifié
+ALGORITHME Gatekeeper
 ENTRÉES :
   - rh_file       : chemin vers le fichier Excel RH
   - ext_file      : chemin vers le fichier Excel d’extraction
