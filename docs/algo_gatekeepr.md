@@ -1,35 +1,3 @@
-# Algorithme Gatekeeper
-
-Ce document présente en **pseudocode structuré** toutes les étapes du pipeline Gatekeeper, de la lecture des fichiers à l’envoi des mails Out SGB.
-
-## Table des matières
-
-1. [Introduction](#introduction)
-2. [Pseudocode complet](#pseudocode-complet)
-
-   1. [Chargement & validation](#1-chargement--validation)
-   2. [Nettoyage & filtrage](#2-nettoyage--filtrage)
-   3. [Agrégation & anomalies](#3-agrégation--anomalies)
-   4. [Fusion RH ↔ Extraction](#4-fusion-rh--extraction)
-   5. [Détection des doublons](#5-détection-des-doublons)
-   6. [Construction du rapport](#6-construction-du-rapport)
-   7. [Injection dans le template Excel](#7-injection-dans-le-template-excel)
-   8. [Flux mail Out SGB (optionnel)](#8-flux-mail-out-sgb-optionnel)
-
-## Introduction
-
-Gatekeeper est un pipeline d’audit des comptes utilisateurs qui :
-
-* Contrôle et nettoie les données d’un référentiel RH et d’une extraction applicative.
-* Détecte anomalies et doublons.
-* Génère un rapport unique (In SGB + Out SGB) conforme à un template Excel.
-* En option, envoie automatiquement les demandes de certification par Outlook.
-
----
-
-## Pseudocode complet
-
-```plaintext
 ALGORITHM GatekeeperPipeline
 INPUT:
     rh_file            // chemin vers le fichier Excel RH
@@ -48,14 +16,14 @@ BEGIN
    1.2 ext_df ← READ_EXCEL(ext_file)  
        // Charger l’extraction applicative
 
-   1.3 CALL validate_rh_dataframe(rh_df)
-       ▸ Normaliser entêtes (unidecode + minuscules + suppression non alphanum)
-       ▸ Renommer selon alias RH attendus
+   1.3 CALL validate_rh_dataframe(rh_df)  
+       ▸ Normaliser les entêtes (unidecode + minuscules + suppression non alphanum)  
+       ▸ Renommer selon les alias RH attendus  
        ▸ ERREUR si colonnes manquantes
 
-   1.4 CALL validate_dataframe(ext_df)
-       ▸ Normaliser entêtes de la même manière
-       ▸ Renommer selon alias d’extraction attendus
+   1.4 CALL validate_dataframe(ext_df)  
+       ▸ Normaliser les entêtes de la même manière  
+       ▸ Renommer selon les alias d’extraction attendus  
        ▸ ERREUR si colonnes manquantes
 
 2. ── NETTOYAGE & FILTRAGE ────────────────────────────────────────────────────
@@ -87,7 +55,7 @@ BEGIN
            // Anomalie sur le statut ?
    END GROUP
 
-4. ── FUSION RH ↔ EXTRACTION ─────────────────────────────────────────────────
+4. ── FUSION RH ↔ EXT ────────────────────────────────────────────────────────
    merged ← LEFT_MERGE(summary_df, rh_df, on=(cuti = rh_id), indicator=_merge)
        // Conserver tous les comptes, marquer In/Out SGB
 
@@ -176,7 +144,7 @@ BEGIN
    ws ← wb.active
    header_map ← {NORMALIZE(cell.value): cell.column FOR cell IN ws[1]}
 
-   FOR i FROM 0 TO report_df.ROWS - 1 DO
+   FOR i FROM 0 TO report_df.ROWS – 1 DO
        FOR each (col_name, value) IN report_df.row(i) DO
            hdr ← TEMPLATE_HEADER[col_name]
            col_index ← header_map[NORMALIZE(hdr)]
@@ -186,7 +154,7 @@ BEGIN
    wb.save(output_path)
        // Rapport final prêt
 
-8. ── FLUX MAIL OUT SGB (OPTIONNEL) ─────────────────────────────────────────
+8. ── FLUX MAIL OUT SGB (optionnel) ─────────────────────────────────────────
    IF do_outsgb AND email_list IS PROVIDED THEN
        addresses ← READ_LINES(email_list)
        OUTLOOK ← INIT_OUTLOOK_COM()
@@ -213,6 +181,3 @@ BEGIN
    END IF
 
 END ALGORITHM
-```
-
-*Fins du document.*

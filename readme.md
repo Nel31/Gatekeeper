@@ -1,178 +1,91 @@
-<style>
-  .kw { color: #0066cc; font-weight: bold; }
-  .comment { color: #009933; }
-  .value { color: #cc0000; }
-</style>
+# GatekeeperPipeline
 
-```plaintext
-<span class="kw">ALGORITHM</span> GatekeeperPipeline
-<span class="kw">INPUT</span>:
-    <span class="value">rh_file</span>            // chemin vers le fichier Excel RH
-    <span class="value">ext_file</span>           // chemin vers le fichier Excel d’extraction
-    <span class="value">template_path</span>      // chemin vers le template Excel de revue
-    <span class="value">output_path</span>        // chemin pour le fichier Excel de revue final
-    <span class="value">certificateur</span>      // nom du certificateur
-    <span class="value">email_list</span> (opt.)  // chemin vers le fichier TXT d’adresses mail
-    <span class="value">flags</span>: { only_insgb, only_outsgb, use_outlook }
+## Description
+`GatekeeperPipeline` est un algorithme conçu pour automatiser la revue et la certification des comptes utilisateurs applicatifs en entreprise. Il compare les extractions de comptes avec le référentiel RH, détecte les anomalies, gère les doublons, et génère un rapport final au format Excel. En option, il peut envoyer par mail les fichiers de certification pour les prestataires externes.
 
-<span class="kw">BEGIN</span>
-1. ── <span class="kw">CHARGEMENT & VALIDATION</span> ──────────────────────────────────────────
-   1.1 rh_df ← READ_EXCEL(rh_file)  <span class="comment">// Charger le référentiel RH</span>
-   1.2 ext_df ← READ_EXCEL(ext_file)  <span class="comment">// Charger l’extraction applicative</span>
+## Prérequis
+- Python 3.6 ou supérieur
+- Bibliothèques Python :
+  - pandas
+  - openpyxl
+  - python-dateutil
+  - fuzzywuzzy (pour le fuzzy matching)
+  - pywin32 (pour l’intégration Outlook sous Windows)
 
-   1.3 CALL validate_rh_dataframe(rh_df)
-       ▸ Normaliser les entêtes (unidecode + minuscules + suppression non alphanum)
-       ▸ Renommer selon les alias RH attendus
-       ▸ <span class="comment">ERREUR si colonnes manquantes</span>
-
-   1.4 CALL validate_dataframe(ext_df)
-       ▸ Normaliser les entêtes de la même manière
-       ▸ Renommer selon les alias d’extraction attendus
-       ▸ <span class="comment">ERREUR si colonnes manquantes</span>
-
-2. ── <span class="kw">NETTOYAGE & FILTRAGE</span> ─────────────────────────────────────────────
-   <span class="kw">FOR</span> each col IN {lib, lputi, status} <span class="kw">DO</span>
-       ext_df[col] ← to_lower(strip(unidecode(ext_df[col])))  <span class="comment">// Uniformiser texte et supprimer accents</span>
-   <span class="kw">END FOR</span>
-
-   ext_df.last_login      ← PARSE_DATE(ext_df.last_login)       <span class="comment">// Convertir en date</span>
-   ext_df.extraction_date ← PARSE_DATE(ext_df.extraction_date)
-
-   ext_df ← FILTER ext_df WHERE status ≠ 'suspendu'              <span class="comment">// Retirer comptes suspendus</span>
-
-3. ── <span class="kw">AGRÉGATION & ANOMALIES</span> ─────────────────────────────────────────────
-   summary_df ← GROUP ext_df BY cuti:
-       last_login      = MAX(last_login)        <span class="comment">// Dernière connexion la plus récente</span>
-       extraction_date = FIRST(extraction_date) <span class="comment">// Date d’extraction</span>
-       lib_anomaly     = (COUNT_UNIQUE(lib) > 1)         
-       lputi_extracted = FIRST(lputi)
-       lputi_anomaly   = (COUNT_UNIQUE(lputi) > 1)
-       status_anomaly  = (COUNT_UNIQUE(status) > 1)
-   <span class="kw">END GROUP</span>
-
-4. ── <span class="kw">FUSION RH ↔ EXT</span> ─────────────────────────────────────────────────
-   merged ← LEFT_MERGE(summary_df, rh_df, on=(cuti = rh_id), indicator=_merge)
-       <span class="comment">// Marquer In/Out SGB</span>
-
-   <span class="kw">FOR</span> each row IN merged <span class="kw">DO</span>
-       <span class="kw">IF</span> row._merge = 'both' <span class="kw">THEN</span
-           row.category ← 'in_sgb'
-       <span class="kw">ELSE</span>
-           row.category ← 'out_sgb'
-       <span class="kw">END IF</span>
-
-       <span class="comment">// Calcul du nombre de jours d’inactivité</span>
-       <span class="kw">IF</span> row.last_login IS NULL <span class="kw">THEN</span
-           row.days_inactive ← +∞       <span class="comment">// Jamais utilisé</span>
-       <span class="kw">ELSE</span>
-           row.days_inactive ← DAYS_BETWEEN(row.extraction_date, row.last_login)
-       <span class="kw">END IF</span>
-   <span class="kw">END FOR</span>
-
-5. ── <span class="kw">DÉTECTION DES DOUBLONS</span> ────────────────────────────────────────────
-   in_sgb_rows ← FILTER merged WHERE category = 'in_sgb'
-   full_names  ← [r.last_name + " " + r.first_name FOR r IN in_sgb_rows]
-   <span class="kw">IF</span> ANY DUPLICATE(full_names) <span class="kw">THEN</span>
-       PRINT "Doublons détectés" AND EXIT(84)
-       <span class="comment">// Arrêt si un même collaborateur a plusieurs comptes</span>
-   <span class="kw">END IF</span>
-
-6. ── <span class="kw">CONSTRUCTION DU RAPPORT</span> ─────────────────────────────────────────
-   report_rows ← EMPTY LIST
-
-   <span class="kw">FOR</span> each row IN merged <span class="kw">DO</span>
-       // Initialisation des champs
-       code_utilisateur      ← row.cuti
-       nom_prenom            ← ""
-       profil                ← ""
-       direction             ← ""
-       recommandation        ← "A certifier"
-       commentaire_revue     ← ""
-       certificateur_field   ← certificateur
-       décision              ← ""
-       exécution             ← ""
-       exécuté_par           ← ""
-       commentaire_exécution ← ""
-
-       <span class="kw">IF</span> row.category = 'in_sgb' <span class="kw">THEN</span>
-           // Données RH pour les internes
-           nom_prenom ← row.last_name + " " + row.first_name
-           profil     ← row.position
-           direction  ← row.direction
-
-           // Décision automatique
-           <span class="kw">IF</span> row.days_inactive > SETTINGS.threshold_days_inactive <span class="kw">THEN</span
-               décision = "A désactiver"
-           <span class="kw">ELSE</span>
-               décision = "A conserver"
-           <span class="kw">END IF</span>
-
-           // Exécution priorise la désactivation
-           <span class="kw">IF</span> décision = "A désactiver" <span class="kw">THEN</span
-               exécution = "Désactivé"
-           <span class="kw">ELSE</span>
-               // Fuzzy-match profil vs extrait
-               score ← FUZZY_SCORE(profil, row.lputi_extracted)
-               <span class="kw">IF</span> score < 85 <span class="kw">THEN</span
-                   exécution = "Modifié"
-               <span class="kw">ELSE</span>
-                   exécution = "Conservé"
-               <span class="kw">END IF</span>
-           <span class="kw">END IF</span>
-       <span class="kw">END IF</span>
-
-       // Pour out_sgb, décision/exécution restent vides (manuel)
-
-       APPEND to report_rows:
-           (code_utilisateur, nom_prenom, profil, direction,
-            recommandation, commentaire_revue, certificateur_field,
-            décision, exécution, exécuté_par, commentaire_exécution)
-   <span class="kw">END FOR</span>
-
-   report_df ← DATAFRAME(report_rows, columns=[
-       code_utilisateur, nom_prenom, profil, direction,
-       recommandation, commentaire_revue, certificateur,
-       décision, exécution, exécuté_par, commentaire_exécution
-   ])
-
-7. ── <span class="kw">INJECTION DANS LE TEMPLATE EXCEL</span> ────────────────────────────
-   wb ← LOAD_WORKBOOK(template_path)
-   ws ← wb.active
-   header_map ← {NORMALIZE(cell.value): cell.column FOR cell IN ws[1]}
-
-   <span class="kw">FOR</span> i FROM 0 TO report_df.ROWS – 1 <span class="kw">DO</span>
-       <span class="kw">FOR</span> each (col_name, value) IN report_df.row(i) <span class="kw">DO</span>
-           hdr ← TEMPLATE_HEADER[col_name]
-           col_index ← header_map[NORMALIZE(hdr)]
-           ws.cell(row=i+2, column=col_index, value=value)
-       <span class="kw">END FOR</span>
-   <span class="kw">END FOR</span>
-   wb.save(output_path)  <span class="comment">// Rapport final prêt</span>
-
-8. ── <span class="kw">FLUX MAIL OUT SGB (optionnel)</span> ─────────────────────────────────
-   <span class="kw">IF</span> do_outsgb AND email_list IS PROVIDED <span class="kw">THEN</span>
-       addresses ← READ_LINES(email_list)
-       OUTLOOK ← INIT_OUTLOOK_COM()
-       <span class="kw">FOR</span> each addr IN addresses <span class="kw">DO</span>
-           mail ← OUTLOOK.CreateItem()
-           mail.To      ← addr
-           mail.Subject ← "Validation comptes externes – " + certificateur
-           mail.Body    ← <<message standard>>
-
-           attachment_path ← PATH_JOIN("outsgb", addr + ".xlsx")
-           mail.Attachments.Add(attachment_path)  <span class="comment">// Pièce jointe automatique</span>
-
-           <span class="kw">TRY</span>
-               mail.Send()
-               status, error ← "Succès", ""
-           <span class="kw">CATCH</span> e
-               status, error ← "Échec", e.message
-           <span class="kw">END TRY</span>
-
-           LOG_SEND_RESULT(addr, status, error)
-               <span class="comment">// Journalisation</span>
-       <span class="kw">END FOR</span>
-   <span class="kw">END IF</span>
-
-<span class="kw">END ALGORITHM</span>
+## Installation
+```bash
+pip install pandas openpyxl python-dateutil fuzzywuzzy pywin32
 ```
+
+## Usage
+```bash
+python gatekeeper_pipeline.py \
+  --rh-file RH.xlsx \
+  --ext-file extraction.xlsx \
+  --template template_revue.xlsx \
+  --output rapport_revue.xlsx \
+  --certificateur "Jean Dupont" \
+  [--email-list mails.txt] \
+  [--only-insgb] [--only-outsgb] [--use-outlook]
+```
+
+### Arguments
+| Option                | Description                                                                                      |
+|-----------------------|--------------------------------------------------------------------------------------------------|
+| `--rh-file`           | Chemin vers le fichier Excel du référentiel RH                                                   |
+| `--ext-file`          | Chemin vers le fichier Excel d’extraction applicative                                            |
+| `--template`          | Chemin vers le template Excel de revue                                                           |
+| `--output`            | Chemin de sortie pour le fichier Excel de revue final                                            |
+| `--certificateur`     | Nom du certificateur devant être inscrit dans le rapport                                         |
+| `--email-list`        | (Optionnel) Chemin vers un fichier TXT contenant les adresses mail des prestataires externes      |
+| `--only-insgb`        | (Flag) Génère uniquement la partie interne (agents SGB)                                           |
+| `--only-outsgb`       | (Flag) Génère uniquement la partie externe (agents hors SGB)                                      |
+| `--use-outlook`       | (Flag) Active l’envoi automatique des mails via Outlook                                          |
+
+## Étapes de l’algorithme
+1. **Chargement & validation**
+   - Lecture des fichiers Excel RH et extraction.
+   - Normalisation et validation des en-têtes.
+2. **Nettoyage & filtrage**
+   - Uniformisation des textes (`lib`, `lputi`, `status`).
+   - Conversion des dates.
+   - Filtrage des comptes suspendus.
+3. **Agrégation & détection d’anomalies**
+   - Agrégation par utilisateur (`cuti`) pour déterminer la dernière connexion, anomalies de libellés et statuts.
+4. **Fusion RH ↔ extraction**
+   - Jointure gauche entre l’extraction agrégée et le référentiel RH.
+   - Catégorisation des comptes en internes (`in_sgb`) ou externes (`out_sgb`).
+   - Calcul des jours d’inactivité.
+5. **Détection des doublons**
+   - Vérification des doublons de noms/prénoms pour les comptes internes. En cas de doublons, interruption du processus (exit code 84).
+6. **Construction du rapport**
+   - Génération des lignes du rapport avec décisions et exécutions automatiques pour les internes.
+   - Attribution manuelle pour les externes.
+7. **Injection dans le template Excel**
+   - Remplissage du template ligne par ligne.
+8. **Flux mail Out SGB (optionnel)**
+   - Envoi des certificats Excel aux prestataires externes via Outlook.
+
+## Structure du rapport
+| Colonne                  | Description                                                   |
+|--------------------------|---------------------------------------------------------------|
+| `code_utilisateur`       | Identifiant du compte (`cuti`)                                |
+| `nom_prenom`             | Nom et prénom de l’utilisateur                                |
+| `profil`                 | Poste ou profil RH                                            |
+| `direction`              | Direction ou service                                          |
+| `recommandation`         | Valeur par défaut : `A certifier`                             |
+| `commentaire_revue`      | Commentaires éventuels de la revue                            |
+| `certificateur`          | Nom du certificateur                                          |
+| `décision`               | Décision finale (`A conserver`, `A désactiver`, etc.)        |
+| `exécution`              | Résultat de l’exécution (`Conservé`, `Désactivé`, `Modifié`)  |
+| `exécuté_par`            | Nom de l’opérateur ayant réalisé l’exécution                  |
+| `commentaire_exécution`  | Commentaires éventuels sur l’exécution                        |
+
+## Exemple d’exécution
+```bash
+python gatekeeper_pipeline.py --rh-file RH.xlsx --ext-file ext.xlsx --template template.xlsx \
+  --output rapport.xlsx --certificateur "Alice Martin" --use-outlook
+```
+
+## Licence
+MIT
