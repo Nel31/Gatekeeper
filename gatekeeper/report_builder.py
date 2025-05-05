@@ -3,35 +3,43 @@ import pandas as pd
 from rapidfuzz import fuzz
 from .config import settings
 
-def build_report(classified: pd.DataFrame, certificateur: str) -> pd.DataFrame:
-    columns = [
-        'code_utilisateur','nom_prenom','profil','direction',
-        'recommandation','commentaire_revue','certificateur',
-        'décision','exécution','exécuté_par','commentaire_exécution'
-    ]
-    rows = []
-    for _, r in classified.iterrows():
-        code = r['cuti']
-        cat = r['category']
-        nom_prenom = profil = direction = ''
-        recommandation = 'A certifier'
-        commentaire_revue = ''
-        décision = exécution = exécuté_par = commentaire_exécution = ''
-        # In SGB
-        if cat=='in_sgb':
-            nom_prenom = f"{r['last_name'].strip()} {r['first_name'].strip()}"
-            profil = r['position']
-            direction = r['direction']
-            décision = 'A désactiver' if r['days_inactive']>settings.threshold_days_inactive else 'A conserver'
-            if décision=='A désactiver':
-                exécution = 'Désactivé'
-            else:
-                score = fuzz.token_sort_ratio(profil.lower().strip(), r['lputi_extracted'].lower().strip())
-                exécution = 'Modifié' if score<85 else 'Conservé'
-        # Out SGB: décisions manuelles
-        rows.append({
-            'code_utilisateur':code,'nom_prenom':nom_prenom,'profil':profil,'direction':direction,
-            'recommandation':recommandation,'commentaire_revue':commentaire_revue,'certificateur':certificateur,
-            'décision':décision,'exécution':exécution,'exécuté_par':exécuté_par,'commentaire_exécution':commentaire_exécution
-        })
-    return pd.DataFrame(rows,columns=columns)
+def build_report(df: pd.DataFrame, certificateur: str) -> pd.DataFrame:
+    in_sgb = df[df['category']=='in_sgb'].copy()
+    in_sgb['full_name'] = (
+        in_sgb['last_name'].str.strip() + ' ' + in_sgb['first_name'].str.strip()
+    )
+    report = in_sgb[[
+        'rh_id','full_name','position','direction',
+        'days_inactive','lputi_extracted'
+    ]].copy()
+    report.rename(columns={
+        'rh_id':'code_utilisateur',
+        'full_name':'nom_prenom',
+        'position':'profil',
+        'direction':'direction'
+    }, inplace=True)
+    report['recommandation'] = 'A certifier'
+    report['certificateur'] = certificateur
+    report['décision'] = report['days_inactive'].apply(
+        lambda d: 'A désactiver' if d>settings.threshold_days_inactive else 'A conserver'
+    )
+
+    def exec_status(row):
+        if row['décision']=='A désactiver':
+            return 'Désactivé'
+        score = fuzz.token_sort_ratio(
+            row['profil'].strip().lower(),
+            row['lputi_extracted'].strip().lower()
+        )
+        if score < 85:
+            return 'Modifié'
+        return 'Conservé'
+
+    report['exécution'] = report.apply(exec_status, axis=1)
+
+    for col in [
+        'commentaire_revue','commentaire_certificateur',
+        'exécuté_par','commentaire_exécution'
+    ]:
+        report[col] = ''
+    return report.drop(columns=['days_inactive','lputi_extracted'])

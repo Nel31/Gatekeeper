@@ -8,14 +8,3 @@ python-dotenv>=0.19
 openpyxl>=3.0
 XlsxWriter>=3.0
 click>=8.0
-pywin32>=305
-# For testing
-pytest>=7.0
-pytest-cov>=3.0
-pytest-mock>=3.0
-# For documentation
-sphinx>=5.0
-sphinx-autodoc-typehints>=1.0
-sphinx-rtd-theme>=1.0
-# For type checking
-mypy>=0.910

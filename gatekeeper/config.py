@@ -5,12 +5,12 @@ from unidecode import unidecode
 
 class Settings(BaseSettings):
     threshold_days_inactive: int = 120
+
     class Config:
         env_file = ".env"
 
 settings = Settings()
 
-# Raw alias mappings
 RAW_COLUMN_ALIASES = {
     'cuti': ['CUTI', 'Identifiant Applicatif', 'applicationID'],
     'last_login': ['DATE DERNIÈRE CONNEXION', 'DateConnexion', 'Date_Derniere_Connexion'],
@@ -26,7 +26,10 @@ RAW_COLUMN_ALIASES = {
 }
 
 def _normalize_alias(alias: str) -> str:
-    """Normalize alias to lowercase alphanumeric."""
-    return re.sub(r'[^a-z0-9]', '', unidecode(alias or '').lower())
+    h = unidecode(alias or "")
+    return re.sub(r'[^a-z0-9]', '', h.lower())
 
-COLUMN_ALIASES = {k: [_normalize_alias(a) for a in v] for k, v in RAW_COLUMN_ALIASES.items()}
+COLUMN_ALIASES = {
+    key: [_normalize_alias(a) for a in vals]
+    for key, vals in RAW_COLUMN_ALIASES.items()
+}

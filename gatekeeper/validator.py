@@ -6,7 +6,8 @@ import pandas as pd
 from .config import COLUMN_ALIASES
 
 def normalize(header: str) -> str:
-    return re.sub(r'[^a-z0-9]', '', unidecode(header or '').lower())
+    h = unidecode(header or "")
+    return re.sub(r'[^a-z0-9]', '', h.lower())
 
 def validate_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     expected = {'cuti', 'last_login', 'extraction_date', 'lib', 'lputi', 'status'}
@@ -15,8 +16,8 @@ def validate_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         norm = normalize(col)
         best_score, best_key = 0, None
         for key in expected:
-            for alias in COLUMN_ALIASES[key]:
-                score = fuzz.ratio(norm, alias)
+            for alias_norm in COLUMN_ALIASES.get(key, []):
+                score = fuzz.ratio(norm, alias_norm)
                 if score > best_score:
                     best_score, best_key = score, key
         if best_score >= 80:
@@ -34,8 +35,8 @@ def validate_rh_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         norm = normalize(col)
         best_score, best_key = 0, None
         for key in expected:
-            for alias in COLUMN_ALIASES[key]:
-                score = fuzz.ratio(norm, alias)
+            for alias_norm in COLUMN_ALIASES.get(key, []):
+                score = fuzz.ratio(norm, alias_norm)
                 if score > best_score:
                     best_score, best_key = score, key
         if best_score >= 80:
