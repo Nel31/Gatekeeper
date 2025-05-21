@@ -1,0 +1,62 @@
+# config/column_aliases.yml
+
+# Identifiant utilisateur
+code_utilisateur:
+  - Identifiant
+  - Identifiant Local
+  - CODE_UTILISATEUR
+  - CUTI
+  - UTICOD
+
+# Nom complet de l’utilisateur
+nom_prenom:
+  - NomComplet
+  - Nom de Famille
+  - Prénom(s)
+  - NOM_UTILISATEUR
+  - LIB
+  - Nom et Prénoms utilisateur
+  - NOMU
+  - UTINOM
+
+# Profil utilisateur
+profil:
+  - Profil utilisateur
+  - Intitulé du poste
+  - PROFIL
+  - LPUTI
+  - LPRO
+  - PROFCOD
+
+old_profil:
+  - Ancien intitulé du poste
+
+
+# Direction / service
+direction:
+  - LBSER
+  - Direction
+  - LSER
+  - Libelle service
+  - LIBELLE SERVICE
+
+# Date de dernière connexion
+last_login:
+  - DateDerniereModif
+  - DATE_DERNIÈRE_CONNEXION
+  - date_de_derniere_connexion
+  - DATE DE DERNIERE CONNEXION
+
+# Statut suspendu
+status:
+  - ACTI
+  - ACTIF
+  - Statut du compte Suspendu
+  - SUS
+  - SUSP
+  - SS
+  - Suspendu
+
+# Date d’extraction
+extraction_date:
+  - DATE_EXTRACTION

@@ -1,0 +1,12 @@
+# config/profile_aliases.yml
+Responsable Ressources Humaines:
+  - DRH
+  - Directeur des ressources humaines
+  - Resp RH
+Chef de projet:
+  - PM
+  - Project Manager
+  - Chef projet
+Comptable:
+  - Accountant
+  - Contrôleur de gestion

@@ -1,3 +1,4 @@
+# gatekeeper/config.py
 from pydantic import BaseSettings
 import yaml
 
@@ -10,3 +11,5 @@ settings = Settings()
 
 with open('config/column_aliases.yml') as f:
     column_alias_map = yaml.safe_load(f)
+with open('config/profile_aliases.yml') as f:
+    profile_alias_map = yaml.safe_load(f)
