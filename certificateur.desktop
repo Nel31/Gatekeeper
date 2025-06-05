@@ -1,9 +1,0 @@
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Certificateur de Comptes
-Comment=Interface de certification des comptes utilisateurs
-Exec=python3 /path/to/certificateur-gui.py
-Icon=/path/to/icon.png
-Terminal=false
-Categories=Office;Utility;
