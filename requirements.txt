@@ -7,3 +7,4 @@ pyyaml
 unidecode
 colorama
 PyQt6
+pyinstaller

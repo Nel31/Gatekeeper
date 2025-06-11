@@ -14,13 +14,13 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSettings
 from PyQt6.QtGui import QFont, QPalette, QColor, QAction, QDragEnterEvent, QDropEvent
 
 # Import des modules existants
-from rh_utils import charger_et_preparer_rh
-from ext_utils import charger_et_preparer_ext
-from match_utils import associer_rh_aux_utilisateurs
-from anomalies import detecter_anomalies, extraire_cas_a_verifier, extraire_cas_automatiques, compter_anomalies_par_type
-from report import inject_to_template
-from profils_valides import ajouter_profil_valide, charger_profils_valides
-from directions_conservees import ajouter_direction_conservee, charger_directions_conservees
+from core.rh_utils import charger_et_preparer_rh
+from core.ext_utils import charger_et_preparer_ext
+from core.match_utils import associer_rh_aux_utilisateurs
+from core.anomalies import detecter_anomalies, extraire_cas_a_verifier, extraire_cas_automatiques, compter_anomalies_par_type
+from core.report import inject_to_template
+from mapping.profils_valides import ajouter_profil_valide, charger_profils_valides
+from mapping.directions_conservees import ajouter_direction_conservee, charger_directions_conservees
 
 # Mapping décision -> labels (depuis main.py)
 DECISION_TO_LABEL = {
@@ -1769,97 +1769,6 @@ les cas à la whitelist pour les prochaines certifications.</p>
         msg.exec()
     
     def generate_report(self):
-        """Générer le rapport Excel"""
-        # Demander où sauvegarder
-        output_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Enregistrer le rapport",
-            os.path.join(self.get_last_directory(), f"rapport_certification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"),
-            "Fichiers Excel (*.xlsx)"
-        )
-        
-        if not output_path:
-            return
-        
-        try:
-            # Animation du bouton
-            self.generate_button.setText("⏳ Génération en cours...")
-            self.generate_button.setEnabled(False)
-            
-            # Préparer les données
-            df_rapport = self.ext_df.copy()
-            df_rapport = self.set_decision_columns(df_rapport)
-            
-            # Générer le rapport
-            inject_to_template(
-                df_rapport, 
-                self.template_path, 
-                output_path,
-                certificateur=self.certificateur
-            )
-            
-            self.generate_button.setText("📥 Télécharger le rapport Excel")
-            self.generate_button.setEnabled(True)
-            
-            # Message de succès avec option d'ouvrir
-            reply = QMessageBox.information(
-                self,
-                "Rapport généré",
-                f"Le rapport a été généré avec succès!\n\n{output_path}\n\nVoulez-vous l'ouvrir?",
-                QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok,
-                QMessageBox.StandardButton.Ok
-            )
-            
-            if reply == QMessageBox.StandardButton.Open:
-                os.startfile(output_path) if sys.platform == "win32" else os.system(f"open {output_path}")
-            
-        except Exception as e:
-            self.generate_button.setText("📥 Télécharger le rapport Excel")
-            self.generate_button.setEnabled(True)
-            QMessageBox.critical(
-                self,
-                "Erreur",
-                f"Erreur lors de la génération du rapport:\n{str(e)}"
-            )
-        """Afficher l'aide pour les décisions"""
-        help_text = """
-<h3>💡 Guide des décisions</h3>
-
-<h4>🔧 Modifier</h4>
-<p>Utilisez cette option quand :</p>
-<ul>
-<li>Le profil/direction RH est plus à jour que celui de l'application</li>
-<li>L'utilisateur a changé de poste récemment</li>
-<li>C'est une erreur de saisie dans l'application</li>
-</ul>
-
-<h4>✅ Conserver</h4>
-<p>Utilisez cette option quand :</p>
-<ul>
-<li>L'écart est justifié et acceptable</li>
-<li>C'est un cas particulier validé</li>
-<li>Le compte nécessite des droits spéciaux</li>
-</ul>
-
-<h4>❌ Désactiver</h4>
-<p>Utilisez cette option quand :</p>
-<ul>
-<li>L'utilisateur a quitté l'entreprise</li>
-<li>Le compte est inactif depuis longtemps (>120 jours)</li>
-<li>C'est un compte de test ou temporaire</li>
-<li>Aucune justification valable pour l'écart</li>
-</ul>
-
-<p><b>Note:</b> Les décisions "Conserver" et "Modifier" ajoutent automatiquement 
-les cas à la whitelist pour les prochaines certifications.</p>
-        """
-        
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Aide aux décisions")
-        msg.setTextFormat(Qt.TextFormat.RichText)
-        msg.setText(help_text)
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.exec()
         """Générer le rapport Excel"""
         # Demander où sauvegarder
         output_path, _ = QFileDialog.getSaveFileName(

@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-CSV_DIRECTIONS = "directions_conservees.csv"
+CSV_DIRECTIONS = "data/directions_conservees.csv"
 
 def charger_directions_conservees(path=CSV_DIRECTIONS):
     if not os.path.exists(path):

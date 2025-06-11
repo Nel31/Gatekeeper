@@ -1,5 +1,5 @@
-from profils_valides import ajouter_profil_valide
-from directions_conservees import ajouter_direction_conservee
+from mapping.profils_valides import ajouter_profil_valide
+from mapping.directions_conservees import ajouter_direction_conservee
 import pandas as pd
 from colorama import Fore, Style, init
 

@@ -6,6 +6,9 @@ code_utilisateur:
   - CODE_UTILISATEUR
   - CUTI
   - UTICOD
+  - Code utilisateur
+  - Identifiant utilisateur
+
 
 nom_prenom:
   - NomComplet

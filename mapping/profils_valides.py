@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-CSV_WHITELIST = "profils_valides.csv"
+CSV_WHITELIST = "data/profils_valides.csv"
 
 def charger_profils_valides(path=CSV_WHITELIST):
     if not os.path.exists(path):

@@ -1,5 +1,5 @@
 import pandas as pd
-from column_mapping import load_column_aliases, auto_rename_columns
+from mapping.column_mapping import load_column_aliases, auto_rename_columns
 
 col_aliases = load_column_aliases('config/column_aliases.yml')
 

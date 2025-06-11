@@ -1,7 +1,8 @@
 import pandas as pd
+import numpy as np
 from rapidfuzz.fuzz import ratio
-from profils_valides import charger_profils_valides, est_changement_profil_valide, ajouter_profil_valide
-from directions_conservees import charger_directions_conservees, est_direction_conservee, ajouter_direction_conservee
+from mapping.profils_valides import charger_profils_valides, est_changement_profil_valide, ajouter_profil_valide
+from mapping.directions_conservees import charger_directions_conservees, est_direction_conservee, ajouter_direction_conservee
 
 SIMILARITY_THRESHOLD = 85
 SEUIL_INACTIVITE = 120

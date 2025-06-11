@@ -1,10 +1,10 @@
 import typer
-from rh_utils import charger_et_preparer_rh
-from ext_utils import charger_et_preparer_ext
-from match_utils import associer_rh_aux_utilisateurs
-from anomalies import detecter_anomalies, extraire_cas_a_verifier, extraire_cas_automatiques
-from manual_review import traiter_cas_manuels
-from report import inject_to_template
+from core.rh_utils import charger_et_preparer_rh
+from core.ext_utils import charger_et_preparer_ext
+from core.match_utils import associer_rh_aux_utilisateurs
+from core.anomalies import detecter_anomalies, extraire_cas_a_verifier, extraire_cas_automatiques
+from core.manual_review import traiter_cas_manuels
+from core.report import inject_to_template
 
 # Mapping centralisé des décisions
 DECISION_TO_LABEL = {
