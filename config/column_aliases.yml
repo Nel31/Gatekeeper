@@ -9,13 +9,17 @@ code_utilisateur:
 
 nom_prenom:
   - NomComplet
+  - Nom et Prénoms
   - Nom de Famille
   - Prénom(s)
   - NOM_UTILISATEUR
   - LIB
   - Nom et Prénoms utilisateur
+  - Nom et Prénom
   - NOMU
   - UTINOM
+  
+  
 
 profil:
   - Profil utilisateur
@@ -47,6 +51,7 @@ status:
   - Statut du compte Suspendu
   - SUS
   - SUSP
+  - SUSPENDU
   - SS
 
 extraction_date:
