@@ -35,7 +35,7 @@ class AnomaliesPage(QWidget):
         self.create_stats_section(layout)
         
         # Répartition des anomalies
-        self.create_anomalies_summary_section(layout)
+        #self.create_anomalies_summary_section(layout)
         
         # Tabs pour les cas
         self.create_tabs_section(layout)
@@ -117,6 +117,7 @@ class AnomaliesPage(QWidget):
         self.manual_table = QTableWidget()
         self.manual_table.setAlternatingRowColors(True)
         self.manual_table.setSortingEnabled(True)
+        self.manual_table.verticalHeader().setDefaultSectionSize(40)
         manual_layout.addWidget(self.manual_table)
         
         self.anomalies_tabs.addTab(manual_tab, "🔍 Cas à vérifier manuellement")
@@ -136,6 +137,7 @@ class AnomaliesPage(QWidget):
         self.auto_table = QTableWidget()
         self.auto_table.setAlternatingRowColors(True)
         self.auto_table.setSortingEnabled(True)
+        self.auto_table.verticalHeader().setDefaultSectionSize(40)
         auto_layout.addWidget(self.auto_table)
         
         self.anomalies_tabs.addTab(auto_tab, "✅ Cas traités automatiquement")
@@ -164,6 +166,7 @@ class AnomaliesPage(QWidget):
         self.validated_table = QTableWidget()
         self.validated_table.setAlternatingRowColors(True)
         self.validated_table.setSortingEnabled(True)
+        self.validated_table.verticalHeader().setDefaultSectionSize(40)
         validated_layout.addWidget(self.validated_table)
         
         self.anomalies_tabs.addTab(validated_tab, "✅ Comptes validés")
@@ -254,7 +257,7 @@ class AnomaliesPage(QWidget):
         self.stat_auto.set_value(str(auto))
         
         # Résumé des anomalies
-        self.update_anomalies_summary(ext_df)
+        #self.update_anomalies_summary(ext_df)
         
         # Remplir les tableaux
         self.fill_manual_table()
@@ -303,13 +306,13 @@ class AnomaliesPage(QWidget):
     
     def fill_manual_table(self):
         """Remplir le tableau des cas manuels"""
-        columns = ['code_utilisateur', 'nom_prenom', 'anomalie', 'decision_manuelle']
+        columns = ['code_utilisateur', 'nom_prenom', 'anomalie', 'profil_extraction', 'direction_extraction', 'jours_inactivite', 'decision_manuelle']
         data = self.cas_a_verifier
         
         self.manual_table.setRowCount(len(data))
         self.manual_table.setColumnCount(len(columns))
         self.manual_table.setHorizontalHeaderLabels(
-            ['Code utilisateur', 'Nom/Prénom', 'Anomalie', 'Décision']
+            ['Code utilisateur', 'Nom/Prénom', 'Anomalie', 'Profil extrait', 'Direction extraite', 'Jours inactivité', 'Décision']
         )
         
         # Stocker les indices pour référence
@@ -337,6 +340,21 @@ class AnomaliesPage(QWidget):
         item = QTableWidgetItem(str(row['anomalie']))
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         self.manual_table.setItem(row_num, 2, item)
+        
+        # Profil extrait
+        item = QTableWidgetItem(str(row.get('profil_extraction', 'N/A')))
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.manual_table.setItem(row_num, 3, item)
+        
+        # Direction extraite
+        item = QTableWidgetItem(str(row.get('direction_extraction', 'N/A')))
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.manual_table.setItem(row_num, 4, item)
+        
+        # Jours d'inactivité
+        item = QTableWidgetItem(str(row.get('jours_inactivite', 'N/A')))
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.manual_table.setItem(row_num, 5, item)
         
         # Décision - ComboBox
         self.create_decision_combo(row_num, idx, row)
@@ -371,7 +389,7 @@ class AnomaliesPage(QWidget):
         )
         
         combo.setStyleSheet(COMBO_BOX_STYLE)
-        self.manual_table.setCellWidget(row_num, 3, combo)
+        self.manual_table.setCellWidget(row_num, 6, combo)
     
     def color_table_row(self, row_num, decision):
         """Colorer une ligne du tableau selon la décision"""
@@ -384,19 +402,19 @@ class AnomaliesPage(QWidget):
         else:
             color = QColor("#0d0d0d")  # Gris très sombre
         
-        for col in range(3):
+        for col in range(6):
             item = self.manual_table.item(row_num, col)
             if item:
                 item.setBackground(color)
     
     def fill_auto_table(self, cas_automatiques):
         """Remplir le tableau des cas automatiques"""
-        columns = ['code_utilisateur', 'nom_prenom', 'anomalie', 'decision_manuelle']
+        columns = ['code_utilisateur', 'nom_prenom', 'anomalie', 'profil_extraction', 'direction_extraction', 'jours_inactivite', 'decision_manuelle']
         
         self.auto_table.setRowCount(len(cas_automatiques))
         self.auto_table.setColumnCount(len(columns))
         self.auto_table.setHorizontalHeaderLabels(
-            ['Code utilisateur', 'Nom/Prénom', 'Anomalie', 'Décision automatique']
+            ['Code utilisateur', 'Nom/Prénom', 'Anomalie', 'Profil extrait', 'Direction extraite', 'Jours inactivité', 'Décision automatique']
         )
         
         for i, (idx, row) in enumerate(cas_automatiques.iterrows()):
@@ -422,6 +440,21 @@ class AnomaliesPage(QWidget):
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         self.auto_table.setItem(row_num, 2, item)
         
+        # Profil extrait
+        item = QTableWidgetItem(str(row.get('profil_extraction', 'N/A')))
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.auto_table.setItem(row_num, 3, item)
+        
+        # Direction extraite
+        item = QTableWidgetItem(str(row.get('direction_extraction', 'N/A')))
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.auto_table.setItem(row_num, 4, item)
+        
+        # Jours d'inactivité
+        item = QTableWidgetItem(str(row.get('jours_inactivite', 'N/A')))
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.auto_table.setItem(row_num, 5, item)
+        
         # Décision (non éditable)
         decision = row.get('decision_manuelle', '')
         item = QTableWidgetItem(decision)
@@ -438,10 +471,10 @@ class AnomaliesPage(QWidget):
         elif decision == "Désactiver":
             item.setForeground(QColor("#ff5555"))  # Rouge clair
 
-        self.auto_table.setItem(row_num, 3, item)
+        self.auto_table.setItem(row_num, 6, item)
         
         # Colorer toute la ligne
-        for col in range(3):
+        for col in range(6):
             self.auto_table.item(row_num, col).setBackground(color)
     
     def get_decision_color(self, decision):
