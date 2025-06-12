@@ -199,17 +199,17 @@ class AnomaliesPage(QWidget):
         
         # Conserver
         conserv_label = QLabel("■ Conserver")
-        conserv_label.setStyleSheet("color: #4caf50; font-weight: bold;")
+        conserv_label.setStyleSheet("color: #00ff55; font-weight: bold;")  # Vert clair
         legend_layout.addWidget(conserv_label)
         
         # Modifier
         modif_label = QLabel("■ Modifier")
-        modif_label.setStyleSheet("color: #ff9800; font-weight: bold;")
+        modif_label.setStyleSheet("color: #ffaa00; font-weight: bold;")  # Orange clair
         legend_layout.addWidget(modif_label)
         
         # Désactiver
         desact_label = QLabel("■ Désactiver")
-        desact_label.setStyleSheet("color: #f44336; font-weight: bold;")
+        desact_label.setStyleSheet("color: #ff5555; font-weight: bold;")  # Rouge clair
         legend_layout.addWidget(desact_label)
         
         parent_layout.addWidget(legend_widget)
@@ -376,13 +376,13 @@ class AnomaliesPage(QWidget):
     def color_table_row(self, row_num, decision):
         """Colorer une ligne du tableau selon la décision"""
         if decision == "Conserver":
-            color = QColor("#e8f5e9")
+            color = QColor("#001a00")  # Vert très sombre
         elif decision == "Modifier":
-            color = QColor("#fff3e0")
+            color = QColor("#1a0f00")  # Orange très sombre
         elif decision == "Désactiver":
-            color = QColor("#ffebee")
+            color = QColor("#1a0000")  # Rouge très sombre
         else:
-            color = QColor("white")
+            color = QColor("#0d0d0d")  # Gris très sombre
         
         for col in range(3):
             item = self.manual_table.item(row_num, col)
@@ -432,12 +432,12 @@ class AnomaliesPage(QWidget):
         item.setBackground(color)
         
         if decision == "Conserver":
-            item.setForeground(QColor("#2e7d32"))
+            item.setForeground(QColor("#00ff55"))  # Vert clair
         elif decision == "Modifier":
-            item.setForeground(QColor("#f57c00"))
+            item.setForeground(QColor("#ffaa00"))  # Orange clair
         elif decision == "Désactiver":
-            item.setForeground(QColor("#c62828"))
-        
+            item.setForeground(QColor("#ff5555"))  # Rouge clair
+
         self.auto_table.setItem(row_num, 3, item)
         
         # Colorer toute la ligne
@@ -447,13 +447,13 @@ class AnomaliesPage(QWidget):
     def get_decision_color(self, decision):
         """Récupérer la couleur selon la décision"""
         if decision == "Conserver":
-            return QColor("#e8f5e9")
+            return QColor("#001a00")  # Vert très sombre
         elif decision == "Modifier":
-            return QColor("#fff3e0")
+            return QColor("#1a0f00")  # Orange très sombre
         elif decision == "Désactiver":
-            return QColor("#ffebee")
+            return QColor("#1a0000")  # Rouge très sombre
         else:
-            return QColor("white")
+            return QColor("#0d0d0d")  # Gris très sombre par défaut
     
     def adjust_table_columns(self, table):
         """Ajuster les colonnes d'un tableau"""
@@ -561,8 +561,8 @@ class AnomaliesPage(QWidget):
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.validated_table.setItem(i, 3, item)
             
-            # Colorer toute la ligne en vert clair pour indiquer la validation
-            color = QColor("#e8f5e9")
+            # Colorer toute la ligne en vert très sombre pour indiquer la validation
+            color = QColor("#001a00")  # Vert très sombre
             for col in range(4):
                 self.validated_table.item(i, col).setBackground(color)
         

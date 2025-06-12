@@ -5,7 +5,7 @@ Widget de statistiques réutilisable compatible PyQt6
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from ui.styles import STAT_WIDGET_STYLE, STAT_VALUE_STYLE, STAT_COLORS
+from ui.styles import STAT_VALUE_STYLE, STAT_COLORS
 
 
 class StatWidget(QFrame):
@@ -20,9 +20,18 @@ class StatWidget(QFrame):
         """Configurer l'interface du widget"""
         self.setFrameStyle(QFrame.Shape.Box)
         
-        # Mapper les couleurs vers RGB
-        color_rgb = self.get_color_rgb(self.color)
-        self.setStyleSheet(STAT_WIDGET_STYLE.format(color_rgb=color_rgb))
+        # Mapper les couleurs vers hex
+        color_hex = self.get_color_hex(self.color)
+        widget_style = f"""
+        QFrame {{
+            background-color: #0a0a0a;
+            border: 2px solid #{color_hex};
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 160px;
+        }}
+        """
+        self.setStyleSheet(widget_style)
         
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
@@ -44,8 +53,8 @@ class StatWidget(QFrame):
         """)
         layout.addWidget(text_label)
     
-    def get_color_rgb(self, hex_color):
-        """Convertir couleur hex vers RGB pour les styles"""
+    def get_color_hex(self, hex_color):
+        """Mapper couleur hex vers hex sans #"""
         if hex_color == "#2196F3" or hex_color == "#1976d2":
             return STAT_COLORS["blue"]
         elif hex_color == "#4CAF50":
