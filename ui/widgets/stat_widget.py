@@ -1,5 +1,5 @@
 """
-Widget de statistiques réutilisable
+Widget de statistiques réutilisable compatible PyQt6
 """
 
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel
@@ -20,29 +20,27 @@ class StatWidget(QFrame):
         """Configurer l'interface du widget"""
         self.setFrameStyle(QFrame.Shape.Box)
         
-        # Mapper les couleurs vers RGB pour le glassmorphism
+        # Mapper les couleurs vers RGB
         color_rgb = self.get_color_rgb(self.color)
         self.setStyleSheet(STAT_WIDGET_STYLE.format(color_rgb=color_rgb))
         
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
         
-        # Label de valeur avec effet glow
+        # Label de valeur
         self.value_label = QLabel(value)
         self.value_label.setFont(QFont("Arial", 28, QFont.Weight.Bold))
         self.value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.value_label.setStyleSheet(STAT_VALUE_STYLE.format(color=self.color))
         layout.addWidget(self.value_label)
         
-        # Label de texte avec style moderne
+        # Label de texte
         text_label = QLabel(label)
         text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         text_label.setStyleSheet("""
             color: rgba(255, 255, 255, 0.9);
             font-size: 13px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         """)
         layout.addWidget(text_label)
     
@@ -63,13 +61,8 @@ class StatWidget(QFrame):
             return STAT_COLORS["blue"]
     
     def set_value(self, value):
-        """Mettre à jour la valeur affichée avec animation subtile"""
+        """Mettre à jour la valeur affichée"""
         self.value_label.setText(str(value))
-        # Effet de flash subtil lors du changement
-        self.value_label.setStyleSheet(f"""
-            {STAT_VALUE_STYLE.format(color=self.color)}
-            animation: pulse 0.3s ease-in-out;
-        """)
     
     def get_value(self):
         """Récupérer la valeur actuelle"""

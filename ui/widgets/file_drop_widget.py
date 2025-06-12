@@ -1,9 +1,9 @@
 """
-Widget qui accepte le glisser-déposer de fichiers avec thème sombre
+Widget qui accepte le glisser-déposer de fichiers compatible PyQt6
 """
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QRect
+from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QRect, QTimer
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from ui.styles import FILE_DROP_NORMAL_STYLE, FILE_DROP_HOVER_STYLE
 
@@ -31,7 +31,7 @@ class FileDropWidget(QWidget):
         self.label.setWordWrap(True)
         layout.addWidget(self.label)
         
-        # Animation pour les transitions
+        # Animation pour les transitions (simplifiée)
         self.animation = QPropertyAnimation(self.label, b"geometry")
         self.animation.setDuration(200)
         self.animation.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -65,29 +65,11 @@ class FileDropWidget(QWidget):
         self.update_hover_state(False)
     
     def update_hover_state(self, is_hover):
-        """Mettre à jour l'état de survol avec animations"""
+        """Mettre à jour l'état de survol"""
         if is_hover:
             self.label.setStyleSheet(FILE_DROP_HOVER_STYLE)
-            # Léger effet de zoom
-            current_rect = self.label.geometry()
-            target_rect = QRect(
-                current_rect.x() - 2,
-                current_rect.y() - 2, 
-                current_rect.width() + 4,
-                current_rect.height() + 4
-            )
-            self.animation.setStartValue(current_rect)
-            self.animation.setEndValue(target_rect)
         else:
             self.label.setStyleSheet(FILE_DROP_NORMAL_STYLE)
-            # Retour à la taille normale
-            if hasattr(self, '_original_rect'):
-                self.animation.setStartValue(self.label.geometry())
-                self.animation.setEndValue(self._original_rect)
-        
-        # Démarrer l'animation
-        if not self.animation.state():
-            self.animation.start()
     
     def show_success_effect(self):
         """Afficher un effet de succès lors du dépôt"""
@@ -98,17 +80,14 @@ class FileDropWidget(QWidget):
                 stop:0 rgba(129, 199, 132, 0.3),
                 stop:1 rgba(129, 199, 132, 0.1));
             color: #81c784;
-            box-shadow: 0 8px 32px rgba(129, 199, 132, 0.4);
             border-radius: 12px;
             padding: 24px;
-            backdrop-filter: blur(10px);
         }
         """
         
         self.label.setStyleSheet(success_style)
         
         # Retour au style normal après un délai
-        from PyQt6.QtCore import QTimer
         QTimer.singleShot(1000, lambda: self.label.setStyleSheet(FILE_DROP_NORMAL_STYLE))
     
     def enterEvent(self, event):
@@ -123,7 +102,6 @@ class FileDropWidget(QWidget):
                     stop:0 rgba(255, 255, 255, 0.1),
                     stop:1 rgba(255, 255, 255, 0.05));
                 color: rgba(255, 255, 255, 0.9);
-                backdrop-filter: blur(10px);
             }
             """
             self.label.setStyleSheet(subtle_hover_style)
