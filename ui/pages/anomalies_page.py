@@ -4,7 +4,7 @@ Page d'affichage des anomalies (Étape 2)
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QTableWidget, QTableWidgetItem, QGroupBox,
-                            QComboBox, QTabWidget, QHeaderView, QMessageBox)
+                            QComboBox, QTabWidget, QHeaderView, QMessageBox, QSizePolicy)
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtCore import Qt
 
@@ -22,6 +22,8 @@ class AnomaliesPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
+        # Permettre le redimensionnement
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setup_ui()
     
     def setup_ui(self):
@@ -52,6 +54,7 @@ class AnomaliesPage(QWidget):
     def create_stats_section(self, parent_layout):
         """Créer la section statistiques"""
         self.stats_widget = QWidget()
+        self.stats_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.stats_widget.setStyleSheet("""
             QWidget {
                 background-color: white;
@@ -87,6 +90,7 @@ class AnomaliesPage(QWidget):
     def create_tabs_section(self, parent_layout):
         """Créer la section avec les onglets"""
         self.anomalies_tabs = QTabWidget()
+        self.anomalies_tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
         # Tab 1: Cas manuels
         self.create_manual_tab()
@@ -102,6 +106,7 @@ class AnomaliesPage(QWidget):
     def create_manual_tab(self):
         """Créer l'onglet des cas manuels"""
         manual_tab = QWidget()
+        manual_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         manual_layout = QVBoxLayout(manual_tab)
         
         # Message informatif
@@ -115,6 +120,7 @@ class AnomaliesPage(QWidget):
         
         # Tableau des cas manuels
         self.manual_table = QTableWidget()
+        self.manual_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.manual_table.setAlternatingRowColors(True)
         self.manual_table.setSortingEnabled(True)
         self.manual_table.verticalHeader().setDefaultSectionSize(40)
@@ -125,6 +131,7 @@ class AnomaliesPage(QWidget):
     def create_auto_tab(self):
         """Créer l'onglet des cas automatiques"""
         auto_tab = QWidget()
+        auto_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         auto_layout = QVBoxLayout(auto_tab)
         
         # Info sur les cas automatiques
@@ -135,6 +142,7 @@ class AnomaliesPage(QWidget):
         
         # Tableau des cas automatiques
         self.auto_table = QTableWidget()
+        self.auto_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.auto_table.setAlternatingRowColors(True)
         self.auto_table.setSortingEnabled(True)
         self.auto_table.verticalHeader().setDefaultSectionSize(40)
@@ -145,6 +153,7 @@ class AnomaliesPage(QWidget):
     def create_validated_tab(self):
         """Créer l'onglet des comptes validés (sans anomalies)"""
         validated_tab = QWidget()
+        validated_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         validated_layout = QVBoxLayout(validated_tab)
         
         # Info sur les comptes validés
@@ -164,6 +173,7 @@ class AnomaliesPage(QWidget):
         
         # Tableau des comptes validés
         self.validated_table = QTableWidget()
+        self.validated_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.validated_table.setAlternatingRowColors(True)
         self.validated_table.setSortingEnabled(True)
         self.validated_table.verticalHeader().setDefaultSectionSize(40)

@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QLabel, QStackedWidget, QMenuBar, QMenu, 
-                            QMessageBox)
+                            QMessageBox, QSizePolicy)
 from PyQt6.QtCore import Qt, QTimer, QSettings
 from PyQt6.QtGui import QAction, QFont
 
@@ -37,7 +37,10 @@ class CertificateurApp(QMainWindow):
     def setup_window(self):
         """Configurer la fenêtre principale"""
         self.setWindowTitle("Certificateur de Comptes - Gatekeeper")
-        self.setGeometry(100, 100, 1400, 900)
+        # Définir une taille minimale raisonnable
+        self.setMinimumSize(1000, 880)
+        # Permettre le redimensionnement
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setStyleSheet(MAIN_STYLE)
     
     def setup_variables(self):

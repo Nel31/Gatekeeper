@@ -6,7 +6,7 @@ import os
 import pandas as pd
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QLineEdit, QFileDialog, QGroupBox, 
-                            QListWidget, QProgressBar)
+                            QListWidget, QProgressBar, QSizePolicy)
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
 
@@ -20,6 +20,8 @@ class LoadingPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
+        # Permettre le redimensionnement
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setup_ui()
     
     def setup_ui(self):
@@ -63,17 +65,27 @@ class LoadingPage(QWidget):
     def create_fields_section(self, parent_layout):
         """Créer la section des champs de saisie"""
         fields_widget = QWidget()
+        fields_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         fields_layout = QVBoxLayout(fields_widget)
-        fields_layout.setSpacing(15)
+        fields_layout.setSpacing(15)  # Espacement uniforme entre les sections
+        fields_layout.setContentsMargins(0, 0, 0, 0)
         
         # Nom du certificateur
         self.create_certificateur_section(fields_layout)
         
+        # Conteneur horizontal pour RH et Extraction
+        files_container = QWidget()
+        files_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        files_layout = QHBoxLayout(files_container)
+        files_layout.setSpacing(15)  # Espacement entre les deux sections
+        
         # Fichiers RH
-        self.create_rh_files_section(fields_layout)
+        self.create_rh_files_section(files_layout)
         
         # Fichier d'extraction
-        self.create_extraction_section(fields_layout)
+        self.create_extraction_section(files_layout)
+        
+        fields_layout.addWidget(files_container)
         
         # Template
         self.create_template_section(fields_layout)
@@ -83,10 +95,14 @@ class LoadingPage(QWidget):
     def create_certificateur_section(self, parent_layout):
         """Créer la section certificateur"""
         cert_group = QGroupBox("Certificateur")
+        cert_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         cert_layout = QVBoxLayout()
-        cert_layout.setSpacing(10)
+        cert_layout.setSpacing(0)
+        cert_layout.setContentsMargins(0, 0, 0, 0)
         
         cert_input_layout = QHBoxLayout()
+        cert_input_layout.setSpacing(0)
+        cert_input_layout.setContentsMargins(0, 0, 0, 0)
         self.cert_input = QLineEdit()
         self.cert_input.setPlaceholderText("Entrez votre nom complet...")
         self.cert_input.textChanged.connect(self.check_can_process)
@@ -104,9 +120,15 @@ class LoadingPage(QWidget):
     def create_rh_files_section(self, parent_layout):
         """Créer la section fichiers RH"""
         rh_group = QGroupBox("Fichiers RH")
+        rh_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        rh_group.setMinimumHeight(200)  # Hauteur minimale
         rh_layout = QVBoxLayout()
+        rh_layout.setSpacing(0)
+        rh_layout.setContentsMargins(0, 0, 0, 0)
         
         rh_button_layout = QHBoxLayout()
+        rh_button_layout.setSpacing(0)
+        rh_button_layout.setContentsMargins(0, 0, 0, 0)
         self.rh_button = QPushButton("📂 Sélectionner les fichiers RH")
         self.rh_button.clicked.connect(self.select_rh_files)
         self.rh_button.setToolTip("Sélectionnez un ou plusieurs fichiers Excel contenant les données RH de référence")
@@ -120,7 +142,7 @@ class LoadingPage(QWidget):
         
         # Liste des fichiers RH
         self.rh_list = QListWidget()
-        self.rh_list.setMaximumHeight(80)
+        self.rh_list.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.rh_list.setVisible(False)
         rh_layout.addWidget(self.rh_list)
         
@@ -135,6 +157,8 @@ class LoadingPage(QWidget):
     def create_extraction_section(self, parent_layout):
         """Créer la section fichier d'extraction"""
         ext_group = QGroupBox("Fichier d'extraction")
+        ext_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        ext_group.setMinimumHeight(200)  # Hauteur minimale
         ext_layout = QVBoxLayout()
         
         ext_button_layout = QHBoxLayout()
@@ -164,6 +188,7 @@ class LoadingPage(QWidget):
     def create_template_section(self, parent_layout):
         """Créer la section template"""
         template_group = QGroupBox("Template de rapport")
+        template_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         template_layout = QVBoxLayout()
         
         template_button_layout = QHBoxLayout()
@@ -351,14 +376,30 @@ class LoadingPage(QWidget):
     
     def reset_form(self):
         """Réinitialiser le formulaire"""
+        # Réinitialiser les champs
         self.cert_input.clear()
-        self.update_rh_display()
+        self.cert_valid_label.setText("")
+        self.rh_count_label.setText("")
+        self.rh_list.clear()
+        self.rh_list.setVisible(False)
+        self.rh_summary.setText("")
         self.ext_label.setText("Aucun fichier sélectionné")
         self.ext_valid_label.setText("")
         self.ext_summary.setText("")
         self.template_label.setText("Aucun fichier sélectionné")
         self.template_valid_label.setText("")
+        
+        # Réinitialiser les variables du parent
+        self.parent_window.rh_paths = []
+        self.parent_window.ext_path = ""
+        self.parent_window.template_path = ""
+        
+        # Réinitialiser le bouton et les messages
+        self.process_button.setText("🚀 Lancer le traitement")
         self.process_button.setEnabled(False)
         self.help_message.setVisible(False)
         self.progress_bar.setVisible(False)
         self.progress_label.setVisible(False)
+        
+        # Vérifier si on peut activer le bouton
+        self.check_can_process()

@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QGroupBox, QTableWidget, QTableWidgetItem,
-                            QFileDialog, QHeaderView)
+                            QFileDialog, QHeaderView, QSizePolicy, QTextEdit)
 from PyQt6.QtGui import QFont
 
 from ui.widgets.stat_widget import StatWidget
@@ -23,6 +23,8 @@ class ReportPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
+        # Permettre le redimensionnement
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setup_ui()
     
     def setup_ui(self):
@@ -288,3 +290,109 @@ class ReportPage(QWidget):
         self.final_stat_desactiver.set_value("0")
         self.report_preview.setRowCount(0)
         self.report_preview.setColumnCount(0)
+
+    def create_summary_section(self, parent_layout):
+        """Créer la section résumé"""
+        self.summary_widget = QWidget()
+        self.summary_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.summary_widget.setStyleSheet("""
+            QWidget {
+                background-color: white;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
+        summary_layout = QHBoxLayout(self.summary_widget)
+        
+        self.summary_total = StatWidget("Total comptes", "0", "#2196F3")
+        self.summary_validated = StatWidget("Validés", "0", "#4CAF50")
+        self.summary_anomalies = StatWidget("Avec anomalies", "0", "#FF9800")
+        self.summary_manual = StatWidget("À vérifier", "0", "#F44336")
+        self.summary_auto = StatWidget("Auto traités", "0", "#9C27B0")
+        
+        summary_layout.addWidget(self.summary_total)
+        summary_layout.addWidget(self.summary_validated)
+        summary_layout.addWidget(self.summary_anomalies)
+        summary_layout.addWidget(self.summary_manual)
+        summary_layout.addWidget(self.summary_auto)
+        
+        parent_layout.addWidget(self.summary_widget)
+
+    def create_report_section(self, parent_layout):
+        """Créer la section rapport"""
+        self.report_widget = QWidget()
+        self.report_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.report_widget.setStyleSheet("""
+            QWidget {
+                background-color: white;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
+        report_layout = QVBoxLayout(self.report_widget)
+        
+        # Titre
+        title = QLabel("Rapport de traitement")
+        title.setStyleSheet("""
+            QLabel {
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 10px;
+            }
+        """)
+        report_layout.addWidget(title)
+        
+        # Zone de texte pour le rapport
+        self.report_text = QTextEdit()
+        self.report_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.report_text.setReadOnly(True)
+        self.report_text.setStyleSheet("""
+            QTextEdit {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 10px;
+                background-color: #f9f9f9;
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+            }
+        """)
+        report_layout.addWidget(self.report_text)
+        
+        parent_layout.addWidget(self.report_widget)
+
+    def create_export_section(self, parent_layout):
+        """Créer la section export"""
+        self.export_widget = QWidget()
+        self.export_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.export_widget.setStyleSheet("""
+            QWidget {
+                background-color: white;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
+        export_layout = QHBoxLayout(self.export_widget)
+        
+        # Bouton d'export
+        self.export_button = QPushButton("Exporter le rapport")
+        self.export_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+            QPushButton:disabled {
+                background-color: #BDBDBD;
+            }
+        """)
+        self.export_button.clicked.connect(self.export_report)
+        export_layout.addWidget(self.export_button)
+        
+        parent_layout.addWidget(self.export_widget)
