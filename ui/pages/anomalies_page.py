@@ -1,667 +1,541 @@
 """
-Page d'affichage des anomalies (Étape 2)
+Page d'affichage des anomalies (Étape 2) - Version compacte et responsive
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-                            QLabel, QTableWidget, QTableWidgetItem, QGroupBox,
-                            QComboBox, QTabWidget, QHeaderView, QMessageBox, QSizePolicy)
+                            QLabel, QTableWidget, QTableWidgetItem, QLineEdit, 
+                            QComboBox, QHeaderView, QSizePolicy, QButtonGroup)
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtCore import Qt
 
 from ui.widgets.stat_widget import StatWidget
-from ui.styles import INFO_MESSAGE_STYLE, AUTO_MESSAGE_STYLE, COMBO_BOX_STYLE
-from ui.utils import show_decision_help_dialog, show_question_message
-from core.anomalies import extraire_cas_a_verifier, extraire_cas_automatiques, compter_anomalies_par_type
-from mapping.profils_valides import ajouter_profil_valide
-from mapping.directions_conservees import ajouter_direction_conservee
+from core.anomalies import extraire_cas_a_verifier, extraire_cas_automatiques
 
 
 class AnomaliesPage(QWidget):
-    """Page d'affichage des anomalies"""
+    """Page d'affichage des anomalies - Version ultra-compacte"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
-        # Permettre le redimensionnement
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.current_view = "manual"  # manual, auto, validated
         self.setup_ui()
     
     def setup_ui(self):
-        """Configurer l'interface de la page"""
+        """Configurer l'interface compacte"""
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 10, 15, 10)  # Marges réduites
+        layout.setSpacing(8)  # Espacement minimal
         
-        # Titre
-        self.create_title_section(layout)
+        # Header ultra-compact
+        self.create_compact_header(layout)
         
-        # Statistiques
-        self.create_stats_section(layout)
+        # Statistiques compactes
+        self.create_compact_stats(layout)
         
-        # Répartition des anomalies
-        #self.create_anomalies_summary_section(layout)
+        # Barre de contrôles (filtres + recherche)
+        self.create_control_bar(layout)
         
-        # Tabs pour les cas
-        self.create_tabs_section(layout)
+        # Tableau unique responsive
+        self.create_single_table(layout)
         
-        # Boutons de navigation
-        self.create_navigation_buttons(layout)
+        # Navigation minimaliste
+        self.create_compact_navigation(layout)
     
-    def create_title_section(self, parent_layout):
-        """Créer la section titre"""
-        title = QLabel("🔍 Anomalies détectées")
-        title.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        parent_layout.addWidget(title)
-    
-    def create_stats_section(self, parent_layout):
-        """Créer la section statistiques"""
-        self.stats_widget = QWidget()
-        self.stats_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.stats_widget.setStyleSheet("""
+    def create_compact_header(self, parent_layout):
+        """Header ultra-compact sur une seule ligne"""
+        header_container = QWidget()
+        header_container.setFixedHeight(50)  # Hauteur fixe réduite
+        header_container.setStyleSheet("""
             QWidget {
-                background-color: white;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #001122, stop:1 #000000);
                 border-radius: 8px;
-                padding: 15px;
             }
         """)
-        stats_layout = QHBoxLayout(self.stats_widget)
         
-        self.stat_total = StatWidget("Total comptes", "0", "#2196F3")
-        self.stat_validated = StatWidget("Validés", "0", "#4CAF50")
-        self.stat_anomalies = StatWidget("Avec anomalies", "0", "#FF9800")
-        self.stat_manual = StatWidget("À vérifier", "0", "#F44336")
-        self.stat_auto = StatWidget("Auto traités", "0", "#9C27B0")
+        header_layout = QHBoxLayout(header_container)
+        header_layout.setContentsMargins(15, 8, 15, 8)
         
-        stats_layout.addWidget(self.stat_total)
-        stats_layout.addWidget(self.stat_validated)
-        stats_layout.addWidget(self.stat_anomalies)
-        stats_layout.addWidget(self.stat_manual)
-        stats_layout.addWidget(self.stat_auto)
+        # Titre compact
+        title = QLabel("🔍 Anomalies Détectées")
+        title.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff; background: transparent;")
+        header_layout.addWidget(title)
         
-        parent_layout.addWidget(self.stats_widget)
-    
-    def create_anomalies_summary_section(self, parent_layout):
-        """Créer la section résumé des anomalies"""
-        anomalies_summary = QGroupBox("Répartition des anomalies")
-        anomalies_layout = QVBoxLayout()
-        self.anomalies_summary_label = QLabel()
-        anomalies_layout.addWidget(self.anomalies_summary_label)
-        anomalies_summary.setLayout(anomalies_layout)
-        parent_layout.addWidget(anomalies_summary)
-    
-    def create_tabs_section(self, parent_layout):
-        """Créer la section avec les onglets"""
-        self.anomalies_tabs = QTabWidget()
-        self.anomalies_tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        header_layout.addStretch()
         
-        # Tab 1: Cas manuels
-        self.create_manual_tab()
-        
-        # Tab 2: Cas automatiques
-        self.create_auto_tab()
-        
-        # Tab 3: Comptes validés (sans anomalies)
-        self.create_validated_tab()
-        
-        parent_layout.addWidget(self.anomalies_tabs)
-    
-    def create_manual_tab(self):
-        """Créer l'onglet des cas manuels"""
-        manual_tab = QWidget()
-        manual_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        manual_layout = QVBoxLayout(manual_tab)
-        
-        # Message informatif
-        info_label = QLabel("💡 Vous pouvez prendre les décisions directement dans le tableau ci-dessous en utilisant les menus déroulants.")
-        info_label.setStyleSheet(INFO_MESSAGE_STYLE)
-        info_label.setWordWrap(True)
-        manual_layout.addWidget(info_label)
-        
-        # Barre d'outils
-        self.create_toolbar(manual_layout)
-        
-        # Tableau des cas manuels
-        self.manual_table = QTableWidget()
-        self.manual_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.manual_table.setAlternatingRowColors(True)
-        self.manual_table.setSortingEnabled(True)
-        self.manual_table.verticalHeader().setDefaultSectionSize(40)
-        manual_layout.addWidget(self.manual_table)
-        
-        self.anomalies_tabs.addTab(manual_tab, "🔍 Cas à vérifier manuellement")
-    
-    def create_auto_tab(self):
-        """Créer l'onglet des cas automatiques"""
-        auto_tab = QWidget()
-        auto_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        auto_layout = QVBoxLayout(auto_tab)
-        
-        # Info sur les cas automatiques
-        auto_info = QLabel("ℹ️ Ces cas ont été traités automatiquement selon les règles définies (inactivité > 120 jours, profils/directions whitelistés).")
-        auto_info.setStyleSheet(AUTO_MESSAGE_STYLE)
-        auto_info.setWordWrap(True)
-        auto_layout.addWidget(auto_info)
-        
-        # Tableau des cas automatiques
-        self.auto_table = QTableWidget()
-        self.auto_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.auto_table.setAlternatingRowColors(True)
-        self.auto_table.setSortingEnabled(True)
-        self.auto_table.verticalHeader().setDefaultSectionSize(40)
-        auto_layout.addWidget(self.auto_table)
-        
-        self.anomalies_tabs.addTab(auto_tab, "✅ Cas traités automatiquement")
-    
-    def create_validated_tab(self):
-        """Créer l'onglet des comptes validés (sans anomalies)"""
-        validated_tab = QWidget()
-        validated_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        validated_layout = QVBoxLayout(validated_tab)
-        
-        # Info sur les comptes validés
-        validated_info = QLabel("✅ Ces comptes sont conformes et ne présentent aucune anomalie. Ils sont automatiquement conservés.")
-        validated_info.setStyleSheet("""
+        # Badge de statut compact
+        self.status_badge = QLabel("En analyse")
+        self.status_badge.setStyleSheet("""
             QLabel {
-                background-color: #e8f5e9;
-                border: 1px solid #c8e6c9;
-                border-radius: 4px;
-                padding: 10px;
-                color: #1b5e20;
-                font-size: 13px;
+                background-color: #0066cc;
+                color: white;
+                padding: 6px 12px;
+                border-radius: 15px;
+                font-weight: bold;
+                font-size: 11px;
             }
         """)
-        validated_info.setWordWrap(True)
-        validated_layout.addWidget(validated_info)
+        header_layout.addWidget(self.status_badge)
         
-        # Tableau des comptes validés
-        self.validated_table = QTableWidget()
-        self.validated_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.validated_table.setAlternatingRowColors(True)
-        self.validated_table.setSortingEnabled(True)
-        self.validated_table.verticalHeader().setDefaultSectionSize(40)
-        validated_layout.addWidget(self.validated_table)
-        
-        self.anomalies_tabs.addTab(validated_tab, "✅ Comptes validés")
+        parent_layout.addWidget(header_container)
     
-    def create_toolbar(self, parent_layout):
-        """Créer la barre d'outils pour les actions groupées"""
-        toolbar_layout = QHBoxLayout()
+    def create_compact_stats(self, parent_layout):
+        """Statistiques compactes et responsives"""
+        stats_container = QWidget()
+        stats_container.setFixedHeight(60)  # Hauteur réduite
+        stats_container.setStyleSheet("""
+            QWidget {
+                background-color: #0a0a0a;
+                border: 1px solid #1a1a1a;
+                border-radius: 8px;
+            }
+        """)
         
-        self.select_all_combo = QComboBox()
-        self.select_all_combo.addItems(["Actions groupées...", "Tout désactiver", "Tout conserver", "Réinitialiser"])
-        self.select_all_combo.currentIndexChanged.connect(self.on_bulk_action)
-        self.select_all_combo.setMinimumWidth(150)
-        toolbar_layout.addWidget(QLabel("Actions en masse:"))
-        toolbar_layout.addWidget(self.select_all_combo)
+        stats_layout = QHBoxLayout(stats_container)
+        stats_layout.setContentsMargins(10, 5, 10, 5)
+        stats_layout.setSpacing(8)
         
-        toolbar_layout.addStretch()
+        # Stats compactes
+        self.create_compact_stat_widget("Total", "0", "#2196F3", stats_layout)
+        self.create_compact_stat_widget("Anomalies", "0", "#FF9800", stats_layout)
+        self.create_compact_stat_widget("À vérifier", "0", "#F44336", stats_layout)
+        self.create_compact_stat_widget("Auto", "0", "#9C27B0", stats_layout)
+        self.create_compact_stat_widget("Conformes", "0", "#4CAF50", stats_layout)
         
-        # Légende des couleurs
-        self.create_color_legend(toolbar_layout)
-        
-        # Bouton d'aide rapide
-        help_button = QPushButton("💡 Aide")
-        help_button.clicked.connect(lambda: show_decision_help_dialog(self))
-        toolbar_layout.addWidget(help_button)
-        
-        parent_layout.addLayout(toolbar_layout)
+        parent_layout.addWidget(stats_container)
     
-    def create_color_legend(self, parent_layout):
-        """Créer la légende des couleurs"""
-        legend_widget = QWidget()
-        legend_layout = QHBoxLayout(legend_widget)
-        legend_layout.setSpacing(15)
+    def create_compact_stat_widget(self, label, value, color, parent_layout):
+        """Widget de statistique ultra-compact"""
+        stat_widget = QWidget()
+        stat_widget.setFixedSize(90, 45)  # Taille fixe réduite
+        stat_widget.setStyleSheet(f"""
+            QWidget {{
+                background-color: #0d0d0d;
+                border: 1px solid {color};
+                border-radius: 6px;
+            }}
+        """)
         
-        # Conserver
-        conserv_label = QLabel("■ Conserver")
-        conserv_label.setStyleSheet("color: #00ff55; font-weight: bold;")  # Vert clair
-        legend_layout.addWidget(conserv_label)
+        layout = QVBoxLayout(stat_widget)
+        layout.setContentsMargins(5, 2, 5, 2)
+        layout.setSpacing(0)
         
-        # Modifier
-        modif_label = QLabel("■ Modifier")
-        modif_label.setStyleSheet("color: #ffaa00; font-weight: bold;")  # Orange clair
-        legend_layout.addWidget(modif_label)
+        # Valeur
+        value_label = QLabel(value)
+        value_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        value_label.setStyleSheet(f"color: {color}; background: transparent;")
+        layout.addWidget(value_label)
         
-        # Désactiver
-        desact_label = QLabel("■ Désactiver")
-        desact_label.setStyleSheet("color: #ff5555; font-weight: bold;")  # Rouge clair
-        legend_layout.addWidget(desact_label)
+        # Label
+        text_label = QLabel(label)
+        text_label.setFont(QFont("Arial", 9))
+        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_label.setStyleSheet("color: #ccc; background: transparent;")
+        layout.addWidget(text_label)
         
-        parent_layout.addWidget(legend_widget)
+        # Stocker la référence pour mise à jour
+        setattr(self, f"stat_{label.lower().replace(' ', '_').replace('à_', 'a_')}", value_label)
+        
+        parent_layout.addWidget(stat_widget)
     
-    def create_navigation_buttons(self, parent_layout):
-        """Créer les boutons de navigation"""
-        button_layout = QHBoxLayout()
+    def create_control_bar(self, parent_layout):
+        """Barre de contrôles compacte"""
+        control_container = QWidget()
+        control_container.setFixedHeight(40)
+        control_layout = QHBoxLayout(control_container)
+        control_layout.setContentsMargins(0, 0, 0, 0)
+        control_layout.setSpacing(10)
+        
+        # Boutons de filtrage (remplacent les tabs)
+        self.create_filter_buttons(control_layout)
+        
+        # Séparateur visuel
+        separator = QLabel("|")
+        separator.setStyleSheet("color: #333; font-size: 20px;")
+        control_layout.addWidget(separator)
+        
+        # Recherche compacte
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("🔍 Rechercher...")
+        self.search_input.setFixedHeight(32)
+        self.search_input.setMaximumWidth(200)
+        self.search_input.setStyleSheet("""
+            QLineEdit {
+                background-color: #0d0d0d;
+                border: 1px solid #333;
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-size: 12px;
+                color: #fff;
+            }
+            QLineEdit:focus { border: 2px solid #0066cc; }
+        """)
+        self.search_input.textChanged.connect(self.filter_table)
+        control_layout.addWidget(self.search_input)
+        
+        # Filtre par anomalie compact
+        self.anomaly_filter = QComboBox()
+        self.anomaly_filter.addItems([
+            "Toutes", "Non RH", "Profil", "Direction", "Inactif"
+        ])
+        self.anomaly_filter.setFixedHeight(32)
+        self.anomaly_filter.setMaximumWidth(120)
+        self.anomaly_filter.setStyleSheet("""
+            QComboBox {
+                background-color: #0d0d0d;
+                border: 1px solid #333;
+                border-radius: 6px;
+                padding: 6px 8px;
+                font-size: 12px;
+                color: #fff;
+            }
+        """)
+        self.anomaly_filter.currentTextChanged.connect(self.filter_table)
+        control_layout.addWidget(self.anomaly_filter)
+        
+        control_layout.addStretch()
+        
+        parent_layout.addWidget(control_container)
+    
+    def create_filter_buttons(self, parent_layout):
+        """Boutons de filtrage élégants (remplacent les tabs)"""
+        self.filter_group = QButtonGroup()
+        
+        filters = [
+            ("manual", "⚠️ À vérifier", "#F44336"),
+            ("auto", "🤖 Auto", "#9C27B0"), 
+            ("validated", "✅ Conformes", "#4CAF50")
+        ]
+        
+        for filter_id, label, color in filters:
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.setFixedHeight(32)
+            btn.setMinimumWidth(100)
+            
+            # Style moderne pour les boutons
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #0d0d0d;
+                    border: 1px solid {color};
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    color: {color};
+                    font-weight: 600;
+                    font-size: 12px;
+                }}
+                QPushButton:checked {{
+                    background-color: {color};
+                    color: #000;
+                }}
+                QPushButton:hover:!checked {{
+                    background-color: #1a1a1a;
+                    color: #fff;
+                }}
+            """)
+            
+            btn.clicked.connect(lambda checked, fid=filter_id: self.switch_view(fid))
+            self.filter_group.addButton(btn)
+            parent_layout.addWidget(btn)
+            
+            # Définir le bouton par défaut
+            if filter_id == "manual":
+                btn.setChecked(True)
+    
+    def create_single_table(self, parent_layout):
+        """Tableau unique qui change de contenu selon le filtre"""
+        self.main_table = QTableWidget()
+        self.main_table.setStyleSheet("""
+            QTableWidget {
+                background-color: #0d0d0d;
+                border: 1px solid #1a1a1a;
+                border-radius: 8px;
+                gridline-color: #1a1a1a;
+                color: #fff;
+                alternate-background-color: #0a0a0a;
+            }
+            QTableWidget::item {
+                padding: 8px;
+                border: none;
+                border-bottom: 1px solid #1a1a1a;
+            }
+            QHeaderView::section {
+                background-color: #0a0a0a;
+                border: none;
+                border-bottom: 2px solid #0066cc;
+                padding: 10px 8px;
+                font-weight: bold;
+                color: #fff;
+                font-size: 11px;
+            }
+        """)
+        
+        self.main_table.setAlternatingRowColors(True)
+        self.main_table.setSortingEnabled(True)
+        self.main_table.verticalHeader().setVisible(False)
+        self.main_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        parent_layout.addWidget(self.main_table)
+    
+    def create_compact_navigation(self, parent_layout):
+        """Navigation ultra-compacte"""
+        nav_container = QWidget()
+        nav_container.setFixedHeight(45)
+        nav_layout = QHBoxLayout(nav_container)
+        nav_layout.setContentsMargins(0, 5, 0, 5)
+        
         self.back_button = QPushButton("← Retour")
+        self.back_button.setFixedHeight(35)
+        self.back_button.setStyleSheet("""
+            QPushButton {
+                background-color: #1a1a1a;
+                border: 1px solid #333;
+                border-radius: 6px;
+                padding: 8px 16px;
+                color: #ccc;
+                font-size: 12px;
+            }
+            QPushButton:hover { background-color: #333; color: #fff; }
+        """)
         self.back_button.clicked.connect(lambda: self.parent_window.go_to_step(0))
-        button_layout.addWidget(self.back_button)
+        nav_layout.addWidget(self.back_button)
         
-        button_layout.addStretch()
+        nav_layout.addStretch()
         
-        self.next_button = QPushButton("Passer à la validation →")
-        self.next_button.setObjectName("primaryButton")
-        self.next_button.clicked.connect(lambda: self.parent_window.go_to_step(2))
-        self.next_button.setToolTip("Vous pouvez prendre les décisions directement dans le tableau ci-dessus ou passer à la validation détaillée")
-        button_layout.addWidget(self.next_button)
+        self.validation_button = QPushButton("Validation détaillée →")
+        self.validation_button.setFixedHeight(35)
+        self.validation_button.setStyleSheet("""
+            QPushButton {
+                background-color: #0066cc;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 20px;
+                color: white;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover { background-color: #0080ff; }
+        """)
+        self.validation_button.clicked.connect(lambda: self.parent_window.go_to_step(2))
+        nav_layout.addWidget(self.validation_button)
         
-        parent_layout.addLayout(button_layout)
+        parent_layout.addWidget(nav_container)
+    
+    def switch_view(self, view_type):
+        """Changer la vue du tableau"""
+        self.current_view = view_type
+        self.update_table_content()
+        
+        # Mettre à jour le message d'information
+        self.update_info_message()
+    
+    def update_table_content(self):
+        """Mettre à jour le contenu du tableau selon la vue active"""
+        if not hasattr(self, 'ext_df'):
+            return
+            
+        if self.current_view == "manual":
+            data = self.cas_a_verifier
+            headers = ["Code", "Nom/Prénom", "Anomalie", "Profil Ext", "Profil RH", "Dir Ext", "Dir RH", "Inactivité"]
+            self.fill_manual_data(data, headers)
+        elif self.current_view == "auto":
+            data = extraire_cas_automatiques(self.ext_df)
+            headers = ["Code", "Nom/Prénom", "Anomalie", "Profil Ext", "Profil RH", "Dir Ext", "Dir RH", "Décision"]
+            self.fill_auto_data(data, headers)
+        else:  # validated
+            data = self.extraire_comptes_valides(self.ext_df)
+            headers = ["Code", "Nom/Prénom", "Profil", "Direction"]
+            self.fill_validated_data(data, headers)
+    
+    def fill_manual_data(self, data, headers):
+        """Remplir avec les données manuelles"""
+        self.main_table.setRowCount(len(data))
+        self.main_table.setColumnCount(len(headers))
+        self.main_table.setHorizontalHeaderLabels(headers)
+        
+        for i, (idx, row) in enumerate(data.iterrows()):
+            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
+            self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
+            self.main_table.setItem(i, 2, self.create_styled_item(str(row['anomalie']), "#ff9900"))
+            
+            # Comparaison profils
+            profil_ext = str(row.get('profil', 'N/A'))
+            profil_rh = str(row.get('profil_rh', 'N/A'))
+            self.main_table.setItem(i, 3, self.create_styled_item(profil_ext))
+            self.main_table.setItem(i, 4, self.create_comparison_item(profil_rh, profil_ext != profil_rh))
+            
+            # Comparaison directions
+            dir_ext = str(row.get('direction', 'N/A'))
+            dir_rh = str(row.get('direction_rh', 'N/A'))
+            self.main_table.setItem(i, 5, self.create_styled_item(dir_ext))
+            self.main_table.setItem(i, 6, self.create_comparison_item(dir_rh, dir_ext != dir_rh))
+            
+            # Inactivité
+            jours = row.get('days_inactive', 'N/A')
+            jours_text = f"{jours:.0f}j" if isinstance(jours, (int, float)) else str(jours)
+            color = "#ff5555" if isinstance(jours, (int, float)) and jours > 120 else None
+            self.main_table.setItem(i, 7, self.create_styled_item(jours_text, color))
+        
+        self.adjust_table_columns()
+    
+    def fill_auto_data(self, data, headers):
+        """Remplir avec les données automatiques"""
+        self.main_table.setRowCount(len(data))
+        self.main_table.setColumnCount(len(headers))
+        self.main_table.setHorizontalHeaderLabels(headers)
+        
+        for i, (idx, row) in enumerate(data.iterrows()):
+            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
+            self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
+            self.main_table.setItem(i, 2, self.create_styled_item(str(row['anomalie']), "#cc00ff"))
+            
+            profil_ext = str(row.get('profil', 'N/A'))
+            profil_rh = str(row.get('profil_rh', 'N/A'))
+            self.main_table.setItem(i, 3, self.create_styled_item(profil_ext))
+            self.main_table.setItem(i, 4, self.create_comparison_item(profil_rh, profil_ext != profil_rh))
+            
+            dir_ext = str(row.get('direction', 'N/A'))
+            dir_rh = str(row.get('direction_rh', 'N/A'))
+            self.main_table.setItem(i, 5, self.create_styled_item(dir_ext))
+            self.main_table.setItem(i, 6, self.create_comparison_item(dir_rh, dir_ext != dir_rh))
+            
+            # Décision avec couleur
+            decision = row.get('decision_manuelle', '')
+            decision_colors = {'Conserver': '#00ff55', 'Modifier': '#ffaa00', 'Désactiver': '#ff5555'}
+            self.main_table.setItem(i, 7, self.create_styled_item(decision, decision_colors.get(decision)))
+        
+        self.adjust_table_columns()
+    
+    def fill_validated_data(self, data, headers):
+        """Remplir avec les données validées"""
+        self.main_table.setRowCount(len(data))
+        self.main_table.setColumnCount(len(headers))
+        self.main_table.setHorizontalHeaderLabels(headers)
+        
+        for i, (idx, row) in enumerate(data.iterrows()):
+            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
+            self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
+            self.main_table.setItem(i, 2, self.create_styled_item(str(row.get('profil', 'N/A'))))
+            self.main_table.setItem(i, 3, self.create_styled_item(str(row.get('direction', 'N/A'))))
+        
+        self.adjust_table_columns()
+    
+    def create_styled_item(self, text, color=None):
+        """Créer un item stylé"""
+        item = QTableWidgetItem(text)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        if color:
+            item.setForeground(QColor(color))
+        return item
+    
+    def create_comparison_item(self, text, is_different):
+        """Créer un item de comparaison"""
+        item = QTableWidgetItem(text)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        
+        if is_different:
+            item.setBackground(QColor("#330000"))
+            item.setForeground(QColor("#ff9999"))
+        else:
+            item.setForeground(QColor("#99ff99"))
+        
+        return item
+    
+    def adjust_table_columns(self):
+        """Ajuster les colonnes de manière responsive"""
+        header = self.main_table.horizontalHeader()
+        
+        # Colonnes fixes pour les codes et noms
+        if self.main_table.columnCount() > 0:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        if self.main_table.columnCount() > 1:
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        
+        # Autres colonnes en mode stretch
+        for i in range(2, self.main_table.columnCount()):
+            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
     
     def update_page(self, ext_df):
-        """Mettre à jour la page avec les nouvelles données"""
+        """Mettre à jour la page"""
         self.ext_df = ext_df
         
-        # Extraire les différents types de cas
+        # Extraire les données
         cas_automatiques = extraire_cas_automatiques(ext_df)
         self.cas_a_verifier = extraire_cas_a_verifier(ext_df)
         comptes_valides = self.extraire_comptes_valides(ext_df)
         
-        # Statistiques
+        # Mettre à jour les statistiques
         total = len(ext_df)
-        validated = len(comptes_valides)
         anomalies = len(ext_df[ext_df['anomalie'].str.len() > 0])
         manual = len(self.cas_a_verifier)
         auto = len(cas_automatiques)
-        
-        self.stat_total.set_value(str(total))
-        self.stat_validated.set_value(str(validated))
-        self.stat_anomalies.set_value(str(anomalies))
-        self.stat_manual.set_value(str(manual))
-        self.stat_auto.set_value(str(auto))
-        
-        # Résumé des anomalies
-        #self.update_anomalies_summary(ext_df)
-        
-        # Remplir les tableaux
-        self.fill_manual_table()
-        self.fill_auto_table(cas_automatiques)
-        self.fill_validated_table(comptes_valides)
-        
-        # Mettre à jour les badges des tabs
-        self.anomalies_tabs.setTabText(0, f"🔍 Cas à vérifier manuellement ({manual})")
-        self.anomalies_tabs.setTabText(1, f"⚙️ Cas traités automatiquement ({auto})")
-        self.anomalies_tabs.setTabText(2, f"✅ Comptes validés ({validated})")
-        
-        # Configurer le bouton suivant
-        self.configure_next_button(manual)
-    
-    def update_anomalies_summary(self, ext_df):
-        """Mettre à jour le résumé des anomalies"""
-        anomalies_count = compter_anomalies_par_type(ext_df)
-        
-        if anomalies_count:
-            summary_text = "Distribution:\n"
-            for anomalie, count in sorted(anomalies_count.items(), key=lambda x: x[1], reverse=True):
-                summary_text += f"• {anomalie}: {count} cas\n"
-            self.anomalies_summary_label.setText(summary_text)
-    
-    def configure_next_button(self, manual_count):
-        """Configurer le bouton suivant selon le nombre de cas manuels"""
-        all_manual_decided = manual_count == 0
-        
-        if all_manual_decided:
-            self.next_button.setText("Générer le rapport →")
-            try:
-                self.next_button.clicked.disconnect()
-            except:
-                pass
-            self.next_button.clicked.connect(lambda: self.parent_window.go_to_step(3))
-            
-            # Message informatif
-            self.parent_window.show_status_message("✅ Toutes les décisions ont été prises ! Vous pouvez générer le rapport.", 5000)
-        else:
-            self.next_button.setText("Validation manuelle détaillée →")
-            try:
-                self.next_button.clicked.disconnect()
-            except:
-                pass
-            self.next_button.clicked.connect(lambda: self.parent_window.go_to_step(2))
-    
-    def fill_manual_table(self):
-        """Remplir le tableau des cas manuels"""
-        columns = ['code_utilisateur', 'nom_prenom', 'anomalie', 'profil_extraction', 'direction_extraction', 'jours_inactivite', 'decision_manuelle']
-        data = self.cas_a_verifier
-        
-        self.manual_table.setRowCount(len(data))
-        self.manual_table.setColumnCount(len(columns))
-        self.manual_table.setHorizontalHeaderLabels(
-            ['Code utilisateur', 'Nom/Prénom', 'Anomalie', 'Profil extrait', 'Direction extraite', 'Jours inactivité', 'Décision']
-        )
-        
-        # Stocker les indices pour référence
-        self.manual_indices = data.index.tolist()
-        
-        for i, (idx, row) in enumerate(data.iterrows()):
-            self.create_table_row(i, idx, row)
-        
-        # Ajuster les colonnes
-        self.adjust_table_columns(self.manual_table)
-    
-    def create_table_row(self, row_num, idx, row):
-        """Créer une ligne du tableau manuel"""
-        # Code utilisateur
-        item = QTableWidgetItem(str(row['code_utilisateur']))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.manual_table.setItem(row_num, 0, item)
-        
-        # Nom/Prénom
-        item = QTableWidgetItem(str(row['nom_prenom']))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.manual_table.setItem(row_num, 1, item)
-        
-        # Anomalie
-        item = QTableWidgetItem(str(row['anomalie']))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.manual_table.setItem(row_num, 2, item)
-        
-        # Profil extrait
-        item = QTableWidgetItem(str(row.get('profil_extraction', 'N/A')))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.manual_table.setItem(row_num, 3, item)
-        
-        # Direction extraite
-        item = QTableWidgetItem(str(row.get('direction_extraction', 'N/A')))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.manual_table.setItem(row_num, 4, item)
-        
-        # Jours d'inactivité
-        item = QTableWidgetItem(str(row.get('jours_inactivite', 'N/A')))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.manual_table.setItem(row_num, 5, item)
-        
-        # Décision - ComboBox
-        self.create_decision_combo(row_num, idx, row)
-    
-    def create_decision_combo(self, row_num, idx, row):
-        """Créer le combo de décision pour une ligne"""
-        combo = QComboBox()
-        
-        # Déterminer les options selon l'anomalie
-        anomalie = row['anomalie']
-        if "Changement de profil à vérifier" in anomalie or "Changement de direction à vérifier" in anomalie:
-            options = ["", "Modifier", "Conserver", "Désactiver"]
-        elif "Compte non RH" in anomalie:
-            options = ["", "Conserver", "Désactiver"]
-        else:
-            options = ["", "Conserver", "Désactiver"]
-        
-        combo.addItems(options)
-        
-        # Sélectionner la décision actuelle si elle existe
-        current_decision = row.get('decision_manuelle', '')
-        if current_decision in options:
-            combo.setCurrentText(current_decision)
-        
-        # Colorer la ligne si une décision est prise
-        if current_decision:
-            self.color_table_row(row_num, current_decision)
-        
-        # Connecter le signal de changement
-        combo.currentTextChanged.connect(
-            lambda text, row_idx=idx, row_n=row_num: self.on_decision_changed(row_idx, text, row_n)
-        )
-        
-        combo.setStyleSheet(COMBO_BOX_STYLE)
-        self.manual_table.setCellWidget(row_num, 6, combo)
-    
-    def color_table_row(self, row_num, decision):
-        """Colorer une ligne du tableau selon la décision"""
-        if decision == "Conserver":
-            color = QColor("#001a00")  # Vert très sombre
-        elif decision == "Modifier":
-            color = QColor("#1a0f00")  # Orange très sombre
-        elif decision == "Désactiver":
-            color = QColor("#1a0000")  # Rouge très sombre
-        else:
-            color = QColor("#0d0d0d")  # Gris très sombre
-        
-        for col in range(6):
-            item = self.manual_table.item(row_num, col)
-            if item:
-                item.setBackground(color)
-    
-    def fill_auto_table(self, cas_automatiques):
-        """Remplir le tableau des cas automatiques"""
-        columns = ['code_utilisateur', 'nom_prenom', 'anomalie', 'profil_extraction', 'direction_extraction', 'jours_inactivite', 'decision_manuelle']
-        
-        self.auto_table.setRowCount(len(cas_automatiques))
-        self.auto_table.setColumnCount(len(columns))
-        self.auto_table.setHorizontalHeaderLabels(
-            ['Code utilisateur', 'Nom/Prénom', 'Anomalie', 'Profil extrait', 'Direction extraite', 'Jours inactivité', 'Décision automatique']
-        )
-        
-        for i, (idx, row) in enumerate(cas_automatiques.iterrows()):
-            self.create_auto_table_row(i, row)
-        
-        # Ajuster les colonnes
-        self.adjust_table_columns(self.auto_table)
-    
-    def create_auto_table_row(self, row_num, row):
-        """Créer une ligne du tableau automatique"""
-        # Code utilisateur
-        item = QTableWidgetItem(str(row['code_utilisateur']))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.auto_table.setItem(row_num, 0, item)
-        
-        # Nom/Prénom
-        item = QTableWidgetItem(str(row['nom_prenom']))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.auto_table.setItem(row_num, 1, item)
-        
-        # Anomalie
-        item = QTableWidgetItem(str(row['anomalie']))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.auto_table.setItem(row_num, 2, item)
-        
-        # Profil extrait
-        item = QTableWidgetItem(str(row.get('profil_extraction', 'N/A')))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.auto_table.setItem(row_num, 3, item)
-        
-        # Direction extraite
-        item = QTableWidgetItem(str(row.get('direction_extraction', 'N/A')))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.auto_table.setItem(row_num, 4, item)
-        
-        # Jours d'inactivité
-        item = QTableWidgetItem(str(row.get('jours_inactivite', 'N/A')))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        self.auto_table.setItem(row_num, 5, item)
-        
-        # Décision (non éditable)
-        decision = row.get('decision_manuelle', '')
-        item = QTableWidgetItem(decision)
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        
-        # Colorer selon la décision
-        color = self.get_decision_color(decision)
-        item.setBackground(color)
-        
-        if decision == "Conserver":
-            item.setForeground(QColor("#00ff55"))  # Vert clair
-        elif decision == "Modifier":
-            item.setForeground(QColor("#ffaa00"))  # Orange clair
-        elif decision == "Désactiver":
-            item.setForeground(QColor("#ff5555"))  # Rouge clair
-
-        self.auto_table.setItem(row_num, 6, item)
-        
-        # Colorer toute la ligne
-        for col in range(6):
-            self.auto_table.item(row_num, col).setBackground(color)
-    
-    def get_decision_color(self, decision):
-        """Récupérer la couleur selon la décision"""
-        if decision == "Conserver":
-            return QColor("#001a00")  # Vert très sombre
-        elif decision == "Modifier":
-            return QColor("#1a0f00")  # Orange très sombre
-        elif decision == "Désactiver":
-            return QColor("#1a0000")  # Rouge très sombre
-        else:
-            return QColor("#0d0d0d")  # Gris très sombre par défaut
-    
-    def adjust_table_columns(self, table):
-        """Ajuster les colonnes d'un tableau"""
-        col_count = table.columnCount()
-        
-        if col_count >= 3:
-            table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-            
-        if col_count >= 4:
-            # Pour les tableaux avec 4 colonnes ou plus
-            if col_count == 4:
-                # Tableau validé : 4 colonnes équilibrées
-                table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-            else:
-                # Tableau manuel/auto : dernière colonne fixe pour les décisions
-                table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
-                table.setColumnWidth(3, 150)
-    
-    def on_decision_changed(self, row_idx, decision, row_num=None):
-        """Gérer le changement de décision dans le tableau"""
-        # Enregistrer la décision
-        self.ext_df.loc[row_idx, 'decision_manuelle'] = decision
-        
-        # Si c'est une décision de conservation ou modification, ajouter aux whitelists
-        if decision in ["Modifier", "Conserver"]:
-            row = self.ext_df.loc[row_idx]
-            anomalie = row.get('anomalie', '')
-            if "Changement de profil à vérifier" in anomalie:
-                ajouter_profil_valide(row, certificateur=self.parent_window.certificateur)
-            if "Changement de direction à vérifier" in anomalie:
-                ajouter_direction_conservee(row, certificateur=self.parent_window.certificateur)
-        
-        # Colorer la ligne si row_num est fourni
-        if row_num is not None and self.manual_table.rowCount() > row_num:
-            self.color_table_row(row_num, decision)
-        
-        # Mettre à jour les données
-        self.update_after_decision_change()
-        
-        # Message de confirmation
-        if decision:
-            self.parent_window.show_status_message(f"✅ Décision '{decision}' enregistrée", 2000)
-    
-    def update_after_decision_change(self):
-        """Mettre à jour après un changement de décision"""
-        # Mettre à jour les cas à vérifier
-        self.cas_a_verifier = extraire_cas_a_verifier(self.ext_df)
-        
-        # Mettre à jour les statistiques
-        cas_automatiques = extraire_cas_automatiques(self.ext_df)
-        comptes_valides = self.extraire_comptes_valides(self.ext_df)
-        
         validated = len(comptes_valides)
-        manual = len(self.cas_a_verifier)
-        auto = len(cas_automatiques)
         
-        self.stat_validated.set_value(str(validated))
-        self.stat_manual.set_value(str(manual))
-        self.stat_auto.set_value(str(auto))
+        self.stat_total.setText(str(total))
+        self.stat_anomalies.setText(str(anomalies))
+        self.stat_a_vérifier.setText(str(manual))
+        self.stat_auto.setText(str(auto))
+        self.stat_conformes.setText(str(validated))
         
-        # Mettre à jour les badges
-        self.anomalies_tabs.setTabText(0, f"🔍 Cas à vérifier manuellement ({manual})")
-        self.anomalies_tabs.setTabText(2, f"✅ Comptes validés ({validated})")
+        # Mettre à jour le badge
+        if manual == 0:
+            self.status_badge.setText("✅ Complet")
+            self.status_badge.setStyleSheet(self.status_badge.styleSheet().replace("#0066cc", "#00cc44"))
+        else:
+            self.status_badge.setText(f"⚠️ {manual} cas")
         
-        # Reconfigurer le bouton suivant
-        self.configure_next_button(manual)
+        # Mettre à jour le contenu du tableau
+        self.update_table_content()
     
     def extraire_comptes_valides(self, ext_df):
-        """Extraire les comptes sans anomalies (validés automatiquement)"""
+        """Extraire les comptes sans anomalies"""
         return ext_df[
             (ext_df['anomalie'].str.len() == 0) | 
             (ext_df['anomalie'].isna())
         ]
     
-    def fill_validated_table(self, comptes_valides):
-        """Remplir le tableau des comptes validés"""
-        columns = ['code_utilisateur', 'nom_prenom', 'profil', 'direction']
+    def filter_table(self):
+        """Filtrer le tableau selon la recherche et le filtre"""
+        search_text = self.search_input.text().lower()
+        anomaly_filter = self.anomaly_filter.currentText()
         
-        self.validated_table.setRowCount(len(comptes_valides))
-        self.validated_table.setColumnCount(len(columns))
-        self.validated_table.setHorizontalHeaderLabels(
-            ['Code utilisateur', 'Nom/Prénom', 'Profil', 'Direction']
-        )
-        
-        for i, (idx, row) in enumerate(comptes_valides.iterrows()):
-            # Code utilisateur
-            item = QTableWidgetItem(str(row['code_utilisateur']))
-            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.validated_table.setItem(i, 0, item)
+        # Implémentation basique du filtrage
+        for row in range(self.main_table.rowCount()):
+            show_row = True
             
-            # Nom/Prénom
-            item = QTableWidgetItem(str(row['nom_prenom']))
-            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.validated_table.setItem(i, 1, item)
+            # Filtre par recherche
+            if search_text:
+                row_text = ""
+                for col in range(min(3, self.main_table.columnCount())):  # Chercher dans les 3 premières colonnes
+                    item = self.main_table.item(row, col)
+                    if item:
+                        row_text += item.text().lower() + " "
+                
+                if search_text not in row_text:
+                    show_row = False
             
-            # Profil
-            item = QTableWidgetItem(str(row.get('profil', 'N/A')))
-            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.validated_table.setItem(i, 2, item)
+            # Filtre par type d'anomalie
+            if show_row and anomaly_filter != "Toutes" and self.main_table.columnCount() > 2:
+                anomaly_item = self.main_table.item(row, 2)  # Colonne anomalie
+                if anomaly_item:
+                    anomaly_text = anomaly_item.text()
+                    filter_map = {
+                        "Non RH": "non rh",
+                        "Profil": "profil",
+                        "Direction": "direction",
+                        "Inactif": "inactif"
+                    }
+                    if anomaly_filter in filter_map:
+                        if filter_map[anomaly_filter] not in anomaly_text.lower():
+                            show_row = False
             
-            # Direction
-            item = QTableWidgetItem(str(row.get('direction', 'N/A')))
-            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.validated_table.setItem(i, 3, item)
-            
-            # Colorer toute la ligne en vert très sombre pour indiquer la validation
-            color = QColor("#001a00")  # Vert très sombre
-            for col in range(4):
-                self.validated_table.item(i, col).setBackground(color)
-        
-        # Ajuster les colonnes
-        self.adjust_table_columns(self.validated_table)
+            self.main_table.setRowHidden(row, not show_row)
     
-    def on_bulk_action(self, index):
-        """Gérer les actions groupées sur les anomalies manuelles"""
-        if index == 0:  # "Actions groupées..."
-            return
-        
-        action = self.select_all_combo.currentText()
-        
-        if action == "Tout désactiver":
-            decision = "Désactiver"
-        elif action == "Tout conserver":
-            decision = "Conserver"
-        elif action == "Réinitialiser":
-            decision = ""
-        else:
-            return
-        
-        # Confirmation
-        if decision:
-            # Compter uniquement les cas manuels
-            manual_mask = (self.ext_df['anomalie'].str.len() > 0) & \
-                         (~self.ext_df.get('cas_automatique', False))
-            nb_manual = manual_mask.sum()
-            
-            reply = show_question_message(
-                self,
-                "Confirmation",
-                f"Voulez-vous vraiment appliquer '{decision}' à tous les {nb_manual} cas manuels?"
-            )
-            
-            if reply != QMessageBox.StandardButton.Yes:
-                self.select_all_combo.setCurrentIndex(0)
-                return
-        
-        # Appliquer la décision uniquement aux cas manuels
-        manual_mask = (self.ext_df['anomalie'].str.len() > 0) & \
-                     (~self.ext_df.get('cas_automatique', False))
-        self.ext_df.loc[manual_mask, 'decision_manuelle'] = decision
-        
-        # Si conservation, ajouter aux whitelists
-        if decision == "Conserver":
-            for idx, row in self.ext_df[manual_mask].iterrows():
-                anomalie = row.get('anomalie', '')
-                if "Changement de profil à vérifier" in anomalie:
-                    ajouter_profil_valide(row, certificateur=self.parent_window.certificateur)
-                if "Changement de direction à vérifier" in anomalie:
-                    ajouter_direction_conservee(row, certificateur=self.parent_window.certificateur)
-        
-        # Mettre à jour l'affichage
-        self.update_page(self.ext_df)
-        self.parent_window.show_status_message(f"✅ Action '{action}' appliquée aux cas manuels", 3000)
-        
-        # Réinitialiser le combo
-        self.select_all_combo.setCurrentIndex(0)
+    def update_info_message(self):
+        """Mettre à jour le message d'information selon la vue"""
+        # Cette méthode peut être étendue pour afficher des messages contextuels
+        pass
