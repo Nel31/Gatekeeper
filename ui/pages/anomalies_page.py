@@ -9,6 +9,7 @@ from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtCore import Qt
 
 from ui.widgets.stat_widget import StatWidget
+from ui.widgets.table_tooltip_helper import TableTooltipHelper
 from core.anomalies import extraire_cas_a_verifier, extraire_cas_automatiques
 
 
@@ -381,6 +382,9 @@ class AnomaliesPage(QWidget):
             self.main_table.setItem(i, 7, self.create_styled_item(jours_text, color))
         
         self.adjust_table_columns()
+        
+        # Ajouter les tooltips automatiques
+        TableTooltipHelper.setup_tooltips_for_table(self.main_table)
     
     def fill_auto_data(self, data, headers):
         """Remplir avec les données automatiques"""
@@ -409,6 +413,9 @@ class AnomaliesPage(QWidget):
             self.main_table.setItem(i, 7, self.create_styled_item(decision, decision_colors.get(decision)))
         
         self.adjust_table_columns()
+        
+        # Ajouter les tooltips automatiques
+        TableTooltipHelper.setup_tooltips_for_table(self.main_table)
     
     def fill_validated_data(self, data, headers):
         """Remplir avec les données validées"""
@@ -423,13 +430,20 @@ class AnomaliesPage(QWidget):
             self.main_table.setItem(i, 3, self.create_styled_item(str(row.get('direction', 'N/A'))))
         
         self.adjust_table_columns()
+        
+        # Ajouter les tooltips automatiques
+        TableTooltipHelper.setup_tooltips_for_table(self.main_table)
     
     def create_styled_item(self, text, color=None):
-        """Créer un item stylé"""
+        """Créer un item stylé avec tooltip automatique"""
         item = QTableWidgetItem(text)
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         if color:
             item.setForeground(QColor(color))
+        
+        # Tooltip automatique si nécessaire (sera mis à jour après insertion)
+        item.setToolTip("")  # Initialiser vide
+        
         return item
     
     def create_comparison_item(self, text, is_different):
@@ -534,6 +548,9 @@ class AnomaliesPage(QWidget):
                             show_row = False
             
             self.main_table.setRowHidden(row, not show_row)
+        
+        # Mettre à jour les tooltips après le filtrage
+        TableTooltipHelper.update_all_tooltips(self.main_table)
     
     def update_info_message(self):
         """Mettre à jour le message d'information selon la vue"""

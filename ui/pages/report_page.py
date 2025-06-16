@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
 from PyQt6.QtGui import QFont
 
 from ui.widgets.stat_widget import StatWidget
+from ui.widgets.table_tooltip_helper import TableTooltipHelper
 from ui.styles import SUCCESS_MESSAGE_STYLE, WARNING_MESSAGE_STYLE
 from ui.utils import (set_decision_columns, get_last_directory, 
                      show_info_message, show_error_message, open_file_with_system)
@@ -204,6 +205,9 @@ class ReportPage(QWidget):
         self.report_preview.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents
         )
+        
+        # Ajouter les tooltips automatiques
+        TableTooltipHelper.setup_tooltips_for_table(self.report_preview)
     
     def generate_report(self):
         """Générer le rapport Excel"""
