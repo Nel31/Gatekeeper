@@ -285,31 +285,35 @@ class CertificateurApp(QMainWindow):
             f"Erreur lors du traitement:\n\n{error_message}\n\nVérifiez que les fichiers sont au bon format."
         )
     
-    def reset_app(self):
+    def reset_app(self, ask_confirmation=True):
         """Réinitialiser l'application"""
-        reply = show_question_message(
-            self,
-            "Nouvelle certification",
-            "Voulez-vous vraiment recommencer une nouvelle certification?\n\nToutes les données non sauvegardées seront perdues."
-        )
+        if ask_confirmation:
+            reply = show_question_message(
+                self,
+                "Nouvelle certification",
+                "Voulez-vous vraiment recommencer une nouvelle certification?\n\nToutes les données non sauvegardées seront perdues."
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
         
-        if reply == QMessageBox.StandardButton.Yes:
-            # Réinitialiser toutes les variables
-            self.ext_df = None
-            self.certificateur = ""
-            self.rh_paths = []
-            self.ext_path = ""
-            self.template_path = ""
-            
-            # Réinitialiser les pages
-            self.loading_page.reset_form()
-            self.validation_page.reset_page()
-            self.report_page.reset_page()
-            
-            # Retourner à la première page
-            self.go_to_step(0)
-            
-            self.show_status_message("Application réinitialisée", 2000)
+        # Réinitialiser toutes les variables
+        self.ext_df = None
+        self.certificateur = ""
+        self.rh_paths = []
+        self.ext_path = ""
+        self.template_path = ""
+        
+        # Réinitialiser les pages
+        self.loading_page.reset_form()
+        self.anomalies_page.reset_page()
+        self.validation_page.reset_page()
+        self.report_page.reset_page()
+        
+        # Retourner à la première page
+        self.go_to_step(0)
+        
+        self.show_status_message("Application réinitialisée", 2000)
     
     def show_status_message(self, message, duration=0):
         """Afficher un message dans la barre de statut"""

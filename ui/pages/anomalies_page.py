@@ -9,7 +9,6 @@ from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtCore import Qt
 
 from ui.widgets.stat_widget import StatWidget
-from ui.widgets.table_tooltip_helper import TableTooltipHelper
 from core.anomalies import extraire_cas_a_verifier, extraire_cas_automatiques
 
 
@@ -302,7 +301,7 @@ class AnomaliesPage(QWidget):
             }
             QPushButton:hover { background-color: #333; color: #fff; }
         """)
-        self.back_button.clicked.connect(lambda: self.parent_window.go_to_step(0))
+        self.back_button.clicked.connect(lambda: self.parent_window.reset_app(ask_confirmation=True))
         nav_layout.addWidget(self.back_button)
         
         nav_layout.addStretch()
@@ -382,9 +381,6 @@ class AnomaliesPage(QWidget):
             self.main_table.setItem(i, 7, self.create_styled_item(jours_text, color))
         
         self.adjust_table_columns()
-        
-        # Ajouter les tooltips automatiques
-        TableTooltipHelper.setup_tooltips_for_table(self.main_table)
     
     def fill_auto_data(self, data, headers):
         """Remplir avec les données automatiques"""
@@ -413,9 +409,6 @@ class AnomaliesPage(QWidget):
             self.main_table.setItem(i, 7, self.create_styled_item(decision, decision_colors.get(decision)))
         
         self.adjust_table_columns()
-        
-        # Ajouter les tooltips automatiques
-        TableTooltipHelper.setup_tooltips_for_table(self.main_table)
     
     def fill_validated_data(self, data, headers):
         """Remplir avec les données validées"""
@@ -430,20 +423,13 @@ class AnomaliesPage(QWidget):
             self.main_table.setItem(i, 3, self.create_styled_item(str(row.get('direction', 'N/A'))))
         
         self.adjust_table_columns()
-        
-        # Ajouter les tooltips automatiques
-        TableTooltipHelper.setup_tooltips_for_table(self.main_table)
     
     def create_styled_item(self, text, color=None):
-        """Créer un item stylé avec tooltip automatique"""
+        """Créer un item stylé"""
         item = QTableWidgetItem(text)
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         if color:
             item.setForeground(QColor(color))
-        
-        # Tooltip automatique si nécessaire (sera mis à jour après insertion)
-        item.setToolTip("")  # Initialiser vide
-        
         return item
     
     def create_comparison_item(self, text, is_different):
@@ -548,11 +534,52 @@ class AnomaliesPage(QWidget):
                             show_row = False
             
             self.main_table.setRowHidden(row, not show_row)
-        
-        # Mettre à jour les tooltips après le filtrage
-        TableTooltipHelper.update_all_tooltips(self.main_table)
     
     def update_info_message(self):
         """Mettre à jour le message d'information selon la vue"""
         # Cette méthode peut être étendue pour afficher des messages contextuels
         pass
+
+    def reset_page(self):
+        """Réinitialiser la page des anomalies"""
+        # Réinitialiser les données
+        if hasattr(self, 'ext_df'):
+            del self.ext_df
+        if hasattr(self, 'cas_a_verifier'):
+            del self.cas_a_verifier
+        
+        # Vider le tableau
+        self.main_table.setRowCount(0)
+        self.main_table.setColumnCount(0)
+        
+        # Réinitialiser les statistiques
+        self.stat_total.setText("0")
+        self.stat_anomalies.setText("0")
+        self.stat_a_vérifier.setText("0")
+        self.stat_auto.setText("0")
+        self.stat_conformes.setText("0")
+        
+        # Réinitialiser les filtres
+        self.search_input.clear()
+        self.anomaly_filter.setCurrentIndex(0)
+        
+        # Réinitialiser le badge
+        self.status_badge.setText("En analyse")
+        self.status_badge.setStyleSheet("""
+            QLabel {
+                background-color: #0066cc;
+                color: white;
+                padding: 6px 12px;
+                border-radius: 15px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+        """)
+        
+        # Réinitialiser la vue
+        self.current_view = "manual"
+        # Cocher le bouton "À vérifier"
+        for button in self.filter_group.buttons():
+            if "À vérifier" in button.text():
+                button.setChecked(True)
+                break
