@@ -1,12 +1,12 @@
 import pandas as pd
 import numpy as np
-import re
-from unidecode import unidecode
-from rapidfuzz.fuzz import ratio
+from core.text_utils import (
+    is_similar, is_semantic_change, extract_key_concepts,
+    normalize_text, SIMILARITY_THRESHOLD
+)
 from mapping.profils_valides import charger_profils_valides, est_changement_profil_valide, ajouter_profil_valide
 from mapping.directions_conservees import charger_directions_conservees, est_direction_conservee, ajouter_direction_conservee
 
-SIMILARITY_THRESHOLD = 85
 SEUIL_INACTIVITE = 120
 
 # Mots à ignorer lors de la normalisation
@@ -66,71 +66,6 @@ def normalize_for_comparison(text):
     filtered_words = [w for w in words if w not in STOP_WORDS]
     
     return " ".join(filtered_words)
-
-def extract_key_concepts(text):
-    """Extraire les concepts métier clés d'un texte"""
-    if pd.isnull(text):
-        return set()
-    
-    normalized = normalize_for_comparison(text)
-    words = set(normalized.split())
-    
-    # Extraire les mots-clés métier
-    key_concepts = words.intersection(ROLE_KEYWORDS)
-    
-    # Si pas de mots-clés trouvés, prendre les mots principaux
-    if not key_concepts and words:
-        # Filtrer les mots très courts
-        key_concepts = {w for w in words if len(w) > 3}
-    
-    return key_concepts
-
-def is_semantic_change(text1, text2):
-    """Détecter si deux textes représentent un changement sémantique significatif"""
-    concepts1 = extract_key_concepts(text1)
-    concepts2 = extract_key_concepts(text2)
-    
-    # Si les ensembles de concepts sont différents, c'est un changement significatif
-    if concepts1 and concepts2:
-        # Calculer le taux de chevauchement
-        intersection = concepts1.intersection(concepts2)
-        union = concepts1.union(concepts2)
-        
-        if union:
-            overlap_ratio = len(intersection) / len(union)
-            # Si moins de 50% de chevauchement, c'est un changement significatif
-            return overlap_ratio < 0.5
-    
-    return False
-
-def is_similar(a, b, threshold=SIMILARITY_THRESHOLD):
-    """Vérifier si deux chaînes sont similaires en tenant compte de la sémantique"""
-    if pd.isnull(a) or pd.isnull(b):
-        return False
-    
-    # Normaliser pour la comparaison
-    a_normalized = normalize_for_comparison(a)
-    b_normalized = normalize_for_comparison(b)
-    
-    # Si identiques après normalisation, c'est similaire
-    if a_normalized == b_normalized:
-        return True
-    
-    # Calculer le score de similarité sur les versions normalisées
-    similarity_score = ratio(a_normalized, b_normalized)
-    
-    # Si le score est très élevé (>95), considérer comme similaire
-    if similarity_score >= 95:
-        return True
-    
-    # Si le score est dans la zone grise (85-95), vérifier la sémantique
-    if similarity_score >= threshold:
-        # Vérifier s'il y a un changement sémantique significatif
-        if is_semantic_change(a, b):
-            return False  # Changement de poste réel
-        return True  # Simple variation de libellé
-    
-    return False
 
 def detecter_anomalies(df, certificateur):
     profils_valides = charger_profils_valides()

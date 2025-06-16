@@ -1,7 +1,6 @@
 from openpyxl import load_workbook
 from datetime import datetime
-import re
-from unidecode import unidecode
+from core.text_utils import normalize_text
 
 FIELD_TO_HEADER = {
     'code_utilisateur':           'Code/identifiant utilisateur',
@@ -21,7 +20,8 @@ FIELD_TO_HEADER = {
 }
 
 def normalize(text: str) -> str:
-    return re.sub(r'[^a-z0-9]', '', unidecode(str(text or '').lower()))
+    """Normaliser un texte pour la comparaison"""
+    return normalize_text(text, remove_stop_words=False)
 
 def inject_to_template(report_df, template_path: str, output_path: str, certificateur: str = ""):
     wb = load_workbook(template_path)
