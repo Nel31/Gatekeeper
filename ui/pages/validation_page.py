@@ -705,6 +705,10 @@ class ValidationPage(QWidget):
         cas_idx = self.cas_a_verifier.index[self.current_cas_index]
         cas = self.cas_a_verifier.loc[cas_idx]
         
+        # S'assurer que les cards sont visibles
+        self.anomaly_card.setVisible(True)
+        self.actions_card.setVisible(True)
+        
         # Afficher les informations
         self.display_case_info(cas)
         self.display_comparison(cas)
@@ -787,7 +791,11 @@ class ValidationPage(QWidget):
         """Afficher le message de fin de validation"""
         self.validation_counter.setText("✅ Tous les cas traités")
         
-        # Masquer les sections et afficher le bouton de fin
+        # Masquer les sections anomalie et actions
+        self.anomaly_card.setVisible(False)
+        self.actions_card.setVisible(False)
+        
+        # Afficher le bouton de fin
         self.finish_validation_button.setVisible(True)
         
         # Message de completion dans la zone utilisateur
@@ -809,6 +817,7 @@ class ValidationPage(QWidget):
                 child.setParent(None)
         
         self.create_info_section("✅ Tous les cas ont été traités avec succès!")
+
     
     def reset_page(self):
         """Réinitialiser la page"""
@@ -818,3 +827,7 @@ class ValidationPage(QWidget):
         self.comment_edit.clear()
         self.validation_progress.setValue(0)
         self.finish_validation_button.setVisible(False)
+        
+        # Rendre les cards visibles à nouveau
+        self.anomaly_card.setVisible(True)
+        self.actions_card.setVisible(True)
