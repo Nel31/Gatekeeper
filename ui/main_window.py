@@ -297,23 +297,23 @@ class CertificateurApp(QMainWindow):
             if reply != QMessageBox.StandardButton.Yes:
                 return
         
-        # Réinitialiser toutes les variables
-        self.ext_df = None
-        self.certificateur = ""
-        self.rh_paths = []
-        self.ext_path = ""
-        self.template_path = ""
-        
-        # Réinitialiser les pages
-        self.loading_page.reset_form()
-        self.anomalies_page.reset_page()
-        self.validation_page.reset_page()
-        self.report_page.reset_page()
-        
-        # Retourner à la première page
-        self.go_to_step(0)
-        
-        self.show_status_message("Application réinitialisée", 2000)
+            # Réinitialiser toutes les variables
+            self.ext_df = None
+            self.certificateur = ""
+            self.rh_paths = []
+            self.ext_path = ""
+            self.template_path = ""
+            
+            # Réinitialiser les pages
+            self.loading_page.reset_form()
+            self.anomalies_page.reset_page()
+            self.validation_page.reset_page()
+            self.report_page.reset_page()
+            
+            # Retourner à la première page
+            self.go_to_step(0)
+            
+            self.show_status_message("Application réinitialisée", 2000)
     
     def show_status_message(self, message, duration=0):
         """Afficher un message dans la barre de statut"""
@@ -400,3 +400,14 @@ class CertificateurApp(QMainWindow):
             
         except Exception as e:
             show_error_message(self, "Erreur", f"Impossible de charger la session:\n{str(e)}")
+
+    def closeEvent(self, event):
+        reply = show_question_message(
+            self,
+            "Confirmation",
+            "Voulez-vous vraiment quitter ? Les modifications non sauvegardées seront perdues."
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            event.accept()
+        else:
+            event.ignore()

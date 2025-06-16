@@ -4,22 +4,33 @@ Page d'affichage des anomalies (Étape 2) - Version compacte et responsive
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QTableWidget, QTableWidgetItem, QLineEdit, 
-                            QComboBox, QHeaderView, QSizePolicy, QButtonGroup)
+                            QComboBox, QHeaderView, QSizePolicy, QButtonGroup, QMessageBox, QFileDialog)
 from PyQt6.QtGui import QFont, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from ui.widgets.stat_widget import StatWidget
 from core.anomalies import extraire_cas_a_verifier, extraire_cas_automatiques
+from core.report import generer_rapport
+from mapping.profils_valides import (
+    ajouter_profil_valide, ajouter_variation_profil, ajouter_changement_profil
+)
+from mapping.directions_conservees import (
+    ajouter_direction_valide, ajouter_variation_direction, ajouter_changement_direction
+)
 
 
 class AnomaliesPage(QWidget):
     """Page d'affichage des anomalies - Version ultra-compacte"""
+    
+    back_clicked = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.current_view = "manual"  # manual, auto, validated
+        self.df = None
+        self.certificateur = None
         self.setup_ui()
     
     def setup_ui(self):
@@ -301,7 +312,7 @@ class AnomaliesPage(QWidget):
             }
             QPushButton:hover { background-color: #333; color: #fff; }
         """)
-        self.back_button.clicked.connect(lambda: self.parent_window.reset_app(ask_confirmation=True))
+        self.back_button.clicked.connect(self.on_back_clicked)
         nav_layout.addWidget(self.back_button)
         
         nav_layout.addStretch()
@@ -340,11 +351,11 @@ class AnomaliesPage(QWidget):
             
         if self.current_view == "manual":
             data = self.cas_a_verifier
-            headers = ["Code", "Nom/Prénom", "Anomalie", "Profil Ext", "Profil RH", "Dir Ext", "Dir RH", "Inactivité"]
+            headers = ["Code", "Nom/Prénom", "Anomalie", "Profil RH", "Direction RH", "Inactivité"]
             self.fill_manual_data(data, headers)
         elif self.current_view == "auto":
             data = extraire_cas_automatiques(self.ext_df)
-            headers = ["Code", "Nom/Prénom", "Anomalie", "Profil Ext", "Profil RH", "Dir Ext", "Dir RH", "Décision"]
+            headers = ["Code", "Nom/Prénom", "Type", "Profil RH", "Direction RH", "Décision"]
             self.fill_auto_data(data, headers)
         else:  # validated
             data = self.extraire_comptes_valides(self.ext_df)
@@ -352,7 +363,7 @@ class AnomaliesPage(QWidget):
             self.fill_validated_data(data, headers)
     
     def fill_manual_data(self, data, headers):
-        """Remplir avec les données manuelles"""
+        """Remplir le tableau - Toujours afficher valeurs RH"""
         self.main_table.setRowCount(len(data))
         self.main_table.setColumnCount(len(headers))
         self.main_table.setHorizontalHeaderLabels(headers)
@@ -360,30 +371,29 @@ class AnomaliesPage(QWidget):
         for i, (idx, row) in enumerate(data.iterrows()):
             self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
             self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
-            self.main_table.setItem(i, 2, self.create_styled_item(str(row['anomalie']), "#ff9900"))
             
-            # Comparaison profils
-            profil_ext = str(row.get('profil', 'N/A'))
-            profil_rh = str(row.get('profil_rh', 'N/A'))
-            self.main_table.setItem(i, 3, self.create_styled_item(profil_ext))
-            self.main_table.setItem(i, 4, self.create_comparison_item(profil_rh, profil_ext != profil_rh))
+            # Anomalie avec indicateur visuel
+            anomalie_text = str(row['anomalie'])
+            if "harmonisé" in anomalie_text.lower():
+                # Jamais affiché dans cas manuels car auto-géré
+                pass
+            else:
+                self.main_table.setItem(i, 2, self.create_styled_item(anomalie_text, "#ff9900"))
             
-            # Comparaison directions
-            dir_ext = str(row.get('direction', 'N/A'))
-            dir_rh = str(row.get('direction_rh', 'N/A'))
-            self.main_table.setItem(i, 5, self.create_styled_item(dir_ext))
-            self.main_table.setItem(i, 6, self.create_comparison_item(dir_rh, dir_ext != dir_rh))
+            # Toujours afficher valeurs RH
+            self.main_table.setItem(i, 3, self.create_styled_item(str(row.get('profil_rh', 'N/A'))))
+            self.main_table.setItem(i, 4, self.create_styled_item(str(row.get('direction_rh', 'N/A'))))
             
             # Inactivité
             jours = row.get('days_inactive', 'N/A')
             jours_text = f"{jours:.0f}j" if isinstance(jours, (int, float)) else str(jours)
             color = "#ff5555" if isinstance(jours, (int, float)) and jours > 120 else None
-            self.main_table.setItem(i, 7, self.create_styled_item(jours_text, color))
+            self.main_table.setItem(i, 5, self.create_styled_item(jours_text, color))
         
         self.adjust_table_columns()
     
     def fill_auto_data(self, data, headers):
-        """Remplir avec les données automatiques"""
+        """Remplir les cas automatiques avec distinction visuelle"""
         self.main_table.setRowCount(len(data))
         self.main_table.setColumnCount(len(headers))
         self.main_table.setHorizontalHeaderLabels(headers)
@@ -391,22 +401,27 @@ class AnomaliesPage(QWidget):
         for i, (idx, row) in enumerate(data.iterrows()):
             self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
             self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
-            self.main_table.setItem(i, 2, self.create_styled_item(str(row['anomalie']), "#cc00ff"))
             
-            profil_ext = str(row.get('profil', 'N/A'))
-            profil_rh = str(row.get('profil_rh', 'N/A'))
-            self.main_table.setItem(i, 3, self.create_styled_item(profil_ext))
-            self.main_table.setItem(i, 4, self.create_comparison_item(profil_rh, profil_ext != profil_rh))
+            # Type d'automatisation
+            anomalie = str(row['anomalie'])
+            if "harmonisé" in anomalie.lower():
+                type_text = "↻ Harmonisation"
+                color = "#4CAF50"
+            elif "inactif" in anomalie.lower():
+                type_text = "💤 Inactivité"
+                color = "#9C27B0"
+            else:
+                type_text = "✓ Validé"
+                color = "#2196F3"
             
-            dir_ext = str(row.get('direction', 'N/A'))
-            dir_rh = str(row.get('direction_rh', 'N/A'))
-            self.main_table.setItem(i, 5, self.create_styled_item(dir_ext))
-            self.main_table.setItem(i, 6, self.create_comparison_item(dir_rh, dir_ext != dir_rh))
+            self.main_table.setItem(i, 2, self.create_styled_item(type_text, color))
             
-            # Décision avec couleur
-            decision = row.get('decision_manuelle', '')
-            decision_colors = {'Conserver': '#00ff55', 'Modifier': '#ffaa00', 'Désactiver': '#ff5555'}
-            self.main_table.setItem(i, 7, self.create_styled_item(decision, decision_colors.get(decision)))
+            # Valeurs RH
+            self.main_table.setItem(i, 3, self.create_styled_item(str(row.get('profil_rh', 'N/A'))))
+            self.main_table.setItem(i, 4, self.create_styled_item(str(row.get('direction_rh', 'N/A'))))
+            
+            # Décision
+            self.main_table.setItem(i, 5, self.create_styled_item(row.get('decision_manuelle', ''), "#00ff55"))
         
         self.adjust_table_columns()
     
@@ -460,15 +475,19 @@ class AnomaliesPage(QWidget):
             header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
     
     def update_page(self, ext_df):
-        """Mettre à jour la page"""
+        """Mettre à jour la page - Afficher les vraies statistiques"""
         self.ext_df = ext_df
+        
+        # Compter les différents types
+        harmonisations = len(ext_df[ext_df['anomalie'].str.contains('harmonisé', case=False, na=False)])
+        changements_reels = len(ext_df[ext_df['anomalie'].str.contains('Changement.*vérifier', case=False, na=False)])
         
         # Extraire les données
         cas_automatiques = extraire_cas_automatiques(ext_df)
         self.cas_a_verifier = extraire_cas_a_verifier(ext_df)
         comptes_valides = self.extraire_comptes_valides(ext_df)
         
-        # Mettre à jour les statistiques
+        # Mettre à jour les statistiques avec distinction
         total = len(ext_df)
         anomalies = len(ext_df[ext_df['anomalie'].str.len() > 0])
         manual = len(self.cas_a_verifier)
@@ -476,19 +495,18 @@ class AnomaliesPage(QWidget):
         validated = len(comptes_valides)
         
         self.stat_total.setText(str(total))
-        self.stat_anomalies.setText(str(anomalies))
+        self.stat_anomalies.setText(f"{anomalies} ({harmonisations}↻)")  # Symbole pour harmonisations
         self.stat_a_vérifier.setText(str(manual))
         self.stat_auto.setText(str(auto))
         self.stat_conformes.setText(str(validated))
         
-        # Mettre à jour le badge
+        # Badge modifié
         if manual == 0:
             self.status_badge.setText("✅ Complet")
             self.status_badge.setStyleSheet(self.status_badge.styleSheet().replace("#0066cc", "#00cc44"))
         else:
-            self.status_badge.setText(f"⚠️ {manual} cas")
+            self.status_badge.setText(f"⚠️ {manual} changements réels")
         
-        # Mettre à jour le contenu du tableau
         self.update_table_content()
     
     def extraire_comptes_valides(self, ext_df):
@@ -583,3 +601,25 @@ class AnomaliesPage(QWidget):
             if "À vérifier" in button.text():
                 button.setChecked(True)
                 break
+
+    def on_back_clicked(self):
+        # Vérifier s'il y a des décisions non prises
+        if self.df is not None:
+            pending = self.df[
+                (~self.df['cas_automatique']) & 
+                (self.df['decision_manuelle'] == "")
+            ]
+            
+            if not pending.empty:
+                reply = QMessageBox.question(
+                    self,
+                    "Décisions non prises",
+                    "Il reste des décisions à prendre. Voulez-vous vraiment quitter ?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if reply == QMessageBox.No:
+                    return
+                    
+        self.back_clicked.emit()

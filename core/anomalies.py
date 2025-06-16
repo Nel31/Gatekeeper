@@ -4,8 +4,14 @@ from core.text_utils import (
     is_similar, is_semantic_change, extract_key_concepts,
     normalize_text, SIMILARITY_THRESHOLD
 )
-from mapping.profils_valides import charger_profils_valides, est_changement_profil_valide, ajouter_profil_valide
-from mapping.directions_conservees import charger_directions_conservees, est_direction_conservee, ajouter_direction_conservee
+from mapping.profils_valides import (
+    charger_profils_valides, est_changement_profil_valide, 
+    ajouter_profil_valide, classifier_changement_profil
+)
+from mapping.directions_conservees import (
+    charger_directions_conservees, est_direction_conservee, 
+    ajouter_direction_valide, classifier_changement_direction
+)
 
 SEUIL_INACTIVITE = 120
 
@@ -74,65 +80,66 @@ def detecter_anomalies(df, certificateur):
     
     anomalies = []
     decisions = []
-    cas_auto = []  # Nouveau : marquer les cas automatiques
+    cas_auto = []
     
     for i, row in df.iterrows():
         tags = []
         decision = ""
-        is_auto = False  # Flag pour cas automatique
+        is_auto = False
         
         compte_non_rh = row.get('compte_non_rh', False)
         profil, profil_rh = row.get('profil', ""), row.get('profil_rh', "")
         direction, direction_rh = row.get('direction', ""), row.get('direction_rh', "")
-        inactif = (row.get('days_inactive') is not None) and (row['days_inactive'] is not None) and (row['days_inactive'] > SEUIL_INACTIVITE)
+        inactif = (row.get('days_inactive') is not None) and (row['days_inactive'] > SEUIL_INACTIVITE)
         
         # 1. Compte non RH
         if compte_non_rh:
             tags.append("Compte non RH")
 
-        # 2. Changement de direction à vérifier
+        # 2. Changement de direction
         if not compte_non_rh and not is_similar(direction, direction_rh):
             if est_direction_conservee(row, directions_conservees):
-                # Cas automatique : direction whitelistée
                 is_auto = True
                 decision = "Conserver"
-            else:
+            elif is_semantic_change(direction, direction_rh):
                 tags.append("Changement de direction à vérifier")
-        elif not compte_non_rh and is_similar(direction, direction_rh):
-            # Fuzzy match validé automatiquement
-            if not est_direction_conservee(row, directions_conservees):
-                ajouter_direction_conservee(row, certificateur)
+            else:
+                # Variation d'écriture - Auto-conserver
+                is_auto = True
+                decision = "Conserver"
+                tags.append("Direction harmonisée")
+                ajouter_direction_valide(row, certificateur)
 
-        # 3. Changement de profil à vérifier
+        # 3. Changement de profil
         if not compte_non_rh and not is_similar(profil, profil_rh):
             if est_changement_profil_valide(row, profils_valides):
-                # Cas automatique : profil whitelisté
                 is_auto = True
                 decision = "Conserver"
-            else:
+            elif is_semantic_change(profil, profil_rh):
                 tags.append("Changement de profil à vérifier")
-        elif not compte_non_rh and is_similar(profil, profil_rh):
-            # Fuzzy match validé automatiquement
-            if not est_changement_profil_valide(row, profils_valides):
+            else:
+                # Variation d'écriture - Auto-conserver
+                is_auto = True
+                decision = "Conserver"
+                tags.append("Profil harmonisé")
                 ajouter_profil_valide(row, certificateur)
 
-        # 4. Inactivité - TOUJOURS automatique
+        # 4. Inactivité
         if inactif:
             tags.append("Compte potentiellement inactif")
             decision = "Désactiver"
-            is_auto = True  # Les inactifs sont TOUJOURS automatiques
+            is_auto = True
         
         anomalies.append(", ".join(tags))
         decisions.append(decision)
         cas_auto.append(is_auto)
     
     df['anomalie'] = anomalies
-    df['cas_automatique'] = cas_auto  # Nouveau champ
+    df['cas_automatique'] = cas_auto
     
     if 'decision_manuelle' not in df.columns:
         df['decision_manuelle'] = ""
     
-    # Remplir automatiquement les décisions pour les cas automatiques
     for i, (d, auto) in enumerate(zip(decisions, cas_auto)):
         if d and auto:
             df.at[df.index[i], 'decision_manuelle'] = d

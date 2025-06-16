@@ -5,22 +5,33 @@ Page de validation manuelle (Étape 3) - Version refactorisée avec UX amélior�
 import pandas as pd
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QGroupBox, QRadioButton, QTextEdit, 
-                            QProgressBar, QFrame, QSizePolicy, QButtonGroup)
+                            QProgressBar, QFrame, QSizePolicy, QButtonGroup,
+                            QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
+                            QComboBox, QLineEdit, QFileDialog)
 from PyQt6.QtGui import QFont, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from core.anomalies import extraire_cas_a_verifier
-from mapping.profils_valides import ajouter_profil_valide
-from mapping.directions_conservees import ajouter_direction_conservee
+from mapping.profils_valides import (
+    ajouter_profil_valide, ajouter_variation_profil, ajouter_changement_profil
+)
+from mapping.directions_conservees import (
+    ajouter_direction_valide, ajouter_variation_direction, ajouter_changement_direction
+)
+from core.report import generer_rapport
 
 
 class ValidationPage(QWidget):
     """Page de validation manuelle avec UX moderne"""
     
+    back_clicked = pyqtSignal()
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
         self.current_cas_index = 0
+        self.df = None
+        self.certificateur = None
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setup_ui()
     
@@ -718,15 +729,30 @@ class ValidationPage(QWidget):
         self.comment_edit.clear()
     
     def configure_actions(self, cas):
-        """Configurer les actions selon l'anomalie"""
+        """Configurer les actions selon l'anomalie et son type"""
         anomalie = cas.get('anomalie', '')
+        type_change = cas.get('type_changement', {})
         
-        if "Changement de profil à vérifier" in anomalie or "Changement de direction à vérifier" in anomalie:
+        # Pour les variations d'écriture
+        if "Variation" in anomalie:
+            self.modifier_container.setVisible(False)  # Pas de modification pour les variations
+            self.radio_conserver.setChecked(True)
+            # Modifier le texte de l'action
+            self.radio_conserver.setText("✓ Confirmer l'équivalence")
+        
+        # Pour les changements réels
+        elif "Changement" in anomalie:
             self.modifier_container.setVisible(True)
             self.radio_modifier.setChecked(True)
+            # Texte standard
+            self.radio_modifier.setText("✏️ Modifier")
+            self.radio_conserver.setText("✓ Conserver")
+        
         else:
+            # Comportement par défaut
             self.modifier_container.setVisible(False)
             self.radio_conserver.setChecked(True)
+            self.radio_conserver.setText("✓ Conserver")
     
     def validate_decision(self):
         """Valider la décision pour le cas en cours"""
@@ -767,8 +793,16 @@ class ValidationPage(QWidget):
         anomalie = cas.get('anomalie', '')
         if "Changement de profil à vérifier" in anomalie:
             ajouter_profil_valide(cas, certificateur=self.parent_window.certificateur)
+            if "variation" in anomalie.lower():
+                ajouter_variation_profil(cas, self.parent_window.certificateur)
+            elif "changement" in anomalie.lower():
+                ajouter_changement_profil(cas, self.parent_window.certificateur)
         if "Changement de direction à vérifier" in anomalie:
-            ajouter_direction_conservee(cas, certificateur=self.parent_window.certificateur)
+            ajouter_direction_valide(cas, certificateur=self.parent_window.certificateur)
+            if "variation" in anomalie.lower():
+                ajouter_variation_direction(cas, self.parent_window.certificateur)
+            elif "changement" in anomalie.lower():
+                ajouter_changement_direction(cas, self.parent_window.certificateur)
     
     def proceed_to_next_case(self):
         """Passer au cas suivant ou afficher la fin"""
@@ -831,3 +865,204 @@ class ValidationPage(QWidget):
         # Rendre les cards visibles à nouveau
         self.anomaly_card.setVisible(True)
         self.actions_card.setVisible(True)
+
+    def set_data(self, df, certificateur):
+        self.df = df
+        self.certificateur = certificateur
+        self.update_table()
+        
+    def update_table(self):
+        if self.df is None:
+            return
+            
+        self.table.setRowCount(0)
+        
+        for _, row in self.df.iterrows():
+            if row['cas_automatique']:
+                continue
+                
+            row_position = self.table.rowCount()
+            self.table.insertRow(row_position)
+            
+            # Récupérer les types de changements
+            type_change = row.get('type_changement', {})
+            type_profil = type_change.get('profil', '')
+            type_direction = type_change.get('direction', '')
+            
+            # Créer l'item de type de changement
+            type_text = []
+            if type_profil:
+                type_text.append(f"Profil: {type_profil}")
+            if type_direction:
+                type_text.append(f"Direction: {type_direction}")
+            type_item = QTableWidgetItem(" | ".join(type_text))
+            
+            # Appliquer le style selon le type
+            if 'variation' in type_text:
+                type_item.setBackground(QColor(255, 255, 200))  # Jaune clair
+            elif 'changement' in type_text:
+                type_item.setBackground(QColor(255, 200, 200))  # Rouge clair
+            
+            self.table.setItem(row_position, 0, QTableWidgetItem(str(row.get('utilisateur', ''))))
+            self.table.setItem(row_position, 1, QTableWidgetItem(str(row.get('profil', ''))))
+            self.table.setItem(row_position, 2, QTableWidgetItem(str(row.get('profil_rh', ''))))
+            self.table.setItem(row_position, 3, QTableWidgetItem(str(row.get('direction', ''))))
+            self.table.setItem(row_position, 4, QTableWidgetItem(str(row.get('direction_rh', ''))))
+            self.table.setItem(row_position, 5, type_item)
+            
+            decision_combo = QComboBox()
+            decision_combo.addItems(["", "Conserver", "Désactiver"])
+            if row.get('decision_manuelle'):
+                decision_combo.setCurrentText(row['decision_manuelle'])
+            decision_combo.currentTextChanged.connect(
+                lambda text, r=row: self.on_decision_changed(r, text)
+            )
+            self.table.setCellWidget(row_position, 6, decision_combo)
+            
+    def apply_filters(self):
+        if self.df is None:
+            return
+            
+        filter_type = self.filter_combo.currentText()
+        search_text = self.search_input.text().lower()
+        
+        for row in range(self.table.rowCount()):
+            show_row = True
+            
+            # Filtre par type
+            if filter_type != "Tous":
+                type_item = self.table.item(row, 5)
+                if type_item:
+                    type_text = type_item.text().lower()
+                    if filter_type == "Variations" and "variation" not in type_text:
+                        show_row = False
+                    elif filter_type == "Changements" and "changement" not in type_text:
+                        show_row = False
+            
+            # Filtre par recherche
+            if show_row and search_text:
+                found = False
+                for col in range(self.table.columnCount()):
+                    item = self.table.item(row, col)
+                    if item and search_text in item.text().lower():
+                        found = True
+                        break
+                show_row = found
+            
+            self.table.setRowHidden(row, not show_row)
+            
+    def on_decision_changed(self, row, decision):
+        if not decision:
+            return
+            
+        # Mettre à jour la décision dans le DataFrame
+        mask = (self.df['utilisateur'] == row['utilisateur'])
+        self.df.loc[mask, 'decision_manuelle'] = decision
+        
+        # Ajouter aux profils/directions valides selon le type
+        type_change = row.get('type_changement', {})
+        
+        if type_change.get('profil') == 'variation':
+            ajouter_variation_profil(row, self.certificateur)
+        elif type_change.get('profil') == 'changement':
+            ajouter_changement_profil(row, self.certificateur)
+            
+        if type_change.get('direction') == 'variation':
+            ajouter_variation_direction(row, self.certificateur)
+        elif type_change.get('direction') == 'changement':
+            ajouter_changement_direction(row, self.certificateur)
+            
+    def validate_selection(self):
+        if self.df is None:
+            return
+            
+        # Vérifier que toutes les décisions sont prises
+        pending = self.df[
+            (~self.df['cas_automatique']) & 
+            (self.df['decision_manuelle'] == "")
+        ]
+        
+        if not pending.empty:
+            QMessageBox.warning(
+                self,
+                "Décisions manquantes",
+                "Veuillez prendre une décision pour tous les cas avant de valider."
+            )
+            return
+            
+        # Mettre à jour les décisions finales
+        self.df['decision_finale'] = self.df['decision_manuelle']
+        self.df.loc[self.df['cas_automatique'], 'decision_finale'] = self.df.loc[
+            self.df['cas_automatique'], 'decision_manuelle'
+        ]
+        
+        QMessageBox.information(
+            self,
+            "Validation réussie",
+            "Les décisions ont été enregistrées avec succès."
+        )
+        
+    def generate_report(self):
+        if self.df is None:
+            return
+            
+        # Vérifier que toutes les décisions sont prises
+        if 'decision_finale' not in self.df.columns:
+            QMessageBox.warning(
+                self,
+                "Décisions manquantes",
+                "Veuillez valider les décisions avant de générer le rapport."
+            )
+            return
+            
+        # Demander l'emplacement du fichier
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Enregistrer le rapport",
+            "",
+            "Excel Files (*.xlsx);;All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                generer_rapport(self.df, file_path)
+                QMessageBox.information(
+                    self,
+                    "Rapport généré",
+                    f"Le rapport a été généré avec succès :\n{file_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Erreur",
+                    f"Erreur lors de la génération du rapport :\n{str(e)}"
+                )
+                
+    def on_back_clicked(self):
+        # Vérifier s'il y a des décisions non prises
+        if self.df is not None:
+            pending = self.df[
+                (~self.df['cas_automatique']) & 
+                (self.df['decision_manuelle'] == "")
+            ]
+            
+            if not pending.empty:
+                reply = QMessageBox.question(
+                    self,
+                    "Décisions non prises",
+                    "Il reste des décisions à prendre. Voulez-vous vraiment quitter ?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if reply == QMessageBox.No:
+                    return
+                    
+        self.back_clicked.emit()
+        
+    def reset_page(self):
+        self.df = None
+        self.certificateur = None
+        self.table.setRowCount(0)
+        self.filter_combo.setCurrentText("Tous")
+        self.search_input.clear()
