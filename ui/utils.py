@@ -9,6 +9,7 @@ from datetime import datetime
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import Qt
+import subprocess
 
 # Mapping décision -> labels (depuis main.py)
 DECISION_TO_LABEL = {
@@ -112,12 +113,15 @@ def load_recent_files(settings):
 
 def open_file_with_system(file_path):
     """Ouvrir un fichier avec l'application système par défaut"""
-    if sys.platform == "win32":
-        os.startfile(file_path)
-    elif sys.platform == "darwin":  # macOS
-        os.system(f"open '{file_path}'")
-    else:  # Linux
-        os.system(f"xdg-open '{file_path}'")
+    try:
+        if sys.platform == "win32":
+            os.startfile(file_path)  # OK sur Windows
+        elif sys.platform == "darwin":
+            subprocess.run(['open', file_path], check=True)
+        else:
+            subprocess.run(['xdg-open', file_path], check=True)
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Impossible d'ouvrir le fichier: {e}")
 
 
 def show_error_message(parent, title, message):

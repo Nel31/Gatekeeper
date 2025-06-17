@@ -1,4 +1,13 @@
 direction_extraction,direction_rh,date_validation,certificateur,type_variation
+service client,,2025-06-17,ty,ecriture
+direction rh,,2025-06-17,ty,ecriture
+direction marketing,,2025-06-17,ty,ecriture
+direction financière,,2025-06-17,ty,ecriture
+service informatique,,2025-06-17,ty,ecriture
+direction technique,,2025-06-17,ty,ecriture
+dsi,,2025-06-17,ty,ecriture
+direction générale,,2025-06-17,ty,ecriture
+service comptabilité,,2025-06-17,ty,ecriture
 dsi,Direction Marketing,2025-06-17,ty,ecriture
 dg,Direction Générale,2025-06-17,ty,ecriture
 ressources humaines,Direction RH,2025-06-17,ty,ecriture
