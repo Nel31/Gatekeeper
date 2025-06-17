@@ -4,6 +4,8 @@ from core.text_utils import (
     is_similar, is_semantic_change, extract_key_concepts,
     normalize_text, SIMILARITY_THRESHOLD
 )
+import re
+from unidecode import unidecode
 from mapping.profils_valides import (
     charger_profils_valides, est_changement_profil_valide, 
     ajouter_profil_valide, classifier_changement_profil
