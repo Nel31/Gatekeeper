@@ -407,6 +407,9 @@ class AnomaliesPage(QWidget):
             if "harmonisé" in anomalie.lower():
                 type_text = "↻ Harmonisation"
                 color = "#4CAF50"
+            elif "non rh" in anomalie.lower():
+                type_text = "🚫 Non RH"
+                color = "#F44336"
             elif "inactif" in anomalie.lower():
                 type_text = "💤 Inactivité"
                 color = "#9C27B0"

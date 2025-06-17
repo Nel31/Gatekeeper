@@ -92,43 +92,43 @@ def detecter_anomalies(df, certificateur):
         direction, direction_rh = row.get('direction', ""), row.get('direction_rh', "")
         inactif = (row.get('days_inactive') is not None) and (row['days_inactive'] > SEUIL_INACTIVITE)
         
-        # 1. Compte non RH
+        # --- AJOUT DES TAGS (toujours additif) ---
+        if inactif:
+            tags.append("Compte potentiellement inactif")
         if compte_non_rh:
             tags.append("Compte non RH")
 
-        # 2. Changement de direction
-        if not compte_non_rh and not is_similar(direction, direction_rh):
-            if est_direction_conservee(row, directions_conservees):
-                is_auto = True
-                decision = "Conserver"
-            elif is_semantic_change(direction, direction_rh):
-                tags.append("Changement de direction à vérifier")
-            else:
-                # Variation d'écriture - Auto-conserver
-                is_auto = True
-                decision = "Conserver"
-                tags.append("Direction harmonisée")
-                ajouter_direction_valide(row, certificateur)
-
-        # 3. Changement de profil
-        if not compte_non_rh and not is_similar(profil, profil_rh):
-            if est_changement_profil_valide(row, profils_valides):
-                is_auto = True
-                decision = "Conserver"
-            elif is_semantic_change(profil, profil_rh):
-                tags.append("Changement de profil à vérifier")
-            else:
-                # Variation d'écriture - Auto-conserver
-                is_auto = True
-                decision = "Conserver"
-                tags.append("Profil harmonisé")
-                ajouter_profil_valide(row, certificateur)
-
-        # 4. Inactivité
+        # --- DÉTERMINATION DE LA DÉCISION ET is_auto (logique prioritaire) ---
         if inactif:
-            tags.append("Compte potentiellement inactif")
             decision = "Désactiver"
             is_auto = True
+        elif compte_non_rh:
+            decision = "Désactiver"
+            is_auto = True
+        elif not is_similar(direction, direction_rh):
+            if est_direction_conservee(row, directions_conservees):
+                decision = "Conserver"
+                is_auto = True
+            elif is_semantic_change(direction, direction_rh):
+                tags.append("Changement de direction à vérifier") # Tag ici car pas de décision auto
+            else:
+                # Variation d'écriture - Auto-conserver
+                decision = "Conserver"
+                is_auto = True
+                tags.append("Direction harmonisée") # Tag ici car décision auto
+                ajouter_direction_valide(row, certificateur)
+        elif not is_similar(profil, profil_rh):
+            if est_changement_profil_valide(row, profils_valides):
+                decision = "Conserver"
+                is_auto = True
+            elif is_semantic_change(profil, profil_rh):
+                tags.append("Changement de profil à vérifier") # Tag ici car pas de décision auto
+            else:
+                # Variation d'écriture - Auto-conserver
+                decision = "Conserver"
+                is_auto = True
+                tags.append("Profil harmonisé") # Tag ici car décision auto
+                ajouter_profil_valide(row, certificateur)
         
         anomalies.append(", ".join(tags))
         decisions.append(decision)
