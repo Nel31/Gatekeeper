@@ -384,15 +384,9 @@ class ValidationPage(QWidget):
                 background-color: {color};
             }}
         """)
+        # Ajout du tooltip sur le radio button
+        radio.setToolTip(description)
         layout.addWidget(radio)
-        
-        # Description compacte
-        desc_label = QLabel(description)
-        desc_label.setStyleSheet("""
-            color: #999; font-size: 10px; background: transparent;
-            margin-left: 22px;
-        """)
-        layout.addWidget(desc_label)
         
         # Stocker les références (radio button ET conteneur)
         if "Modifier" in title:
