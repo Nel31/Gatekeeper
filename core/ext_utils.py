@@ -1,13 +1,14 @@
 import pandas as pd
-from mapping.column_mapping import load_column_aliases, auto_rename_columns
+from mapping.column_mapping import auto_rename_columns
+from config.constants import COLUMN_ALIASES
 
-col_aliases = load_column_aliases('config/column_aliases.yml')
 
 def robust_datetime_parse(series):
     parsed = pd.to_datetime(series, errors='coerce')
     if parsed.isna().any():
         parsed = pd.to_datetime(series, errors='coerce', dayfirst=True)
     return parsed
+
 
 def deduplicate_extraction(df):
     # On garde le dernier login le plus récent par utilisateur
@@ -19,11 +20,12 @@ def deduplicate_extraction(df):
     # (Optionnel) : si profils/directions diffèrent, détecter l'incohérence ici !
     return grouped
 
+
 def charger_et_preparer_ext(fichier_ext):
     df = pd.read_excel(fichier_ext)
-    df = auto_rename_columns(df, col_aliases)
+    df = auto_rename_columns(df, COLUMN_ALIASES)
     df = deduplicate_extraction(df)
-    
+
     # Filtrage comptes suspendus/désactivés
     if 'status' in df.columns:
         status_col = 'status'
@@ -32,7 +34,8 @@ def charger_et_preparer_ext(fichier_ext):
         # Liste des valeurs qui signifient "suspendu" ou "désactivé"
         valeurs_non_actives = {
             '1', 'oui', 'true', 'vrai',
-            'suspendu', 'désactive', 'désactivé', 'desactive', 'inactive', 'locked', 'supprimé', 'supprime', 'deleted', 'archive'
+            'suspendu', 'désactive', 'désactivé', 'desactive', 'inactive', 'locked', 'supprimé', 'supprime', 'deleted',
+            'archive'
         }
         # On retire tout ce qui n'est pas clairement actif/0/non
         df = df[~df[status_col].isin(valeurs_non_actives)].copy()

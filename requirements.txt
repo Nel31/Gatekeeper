@@ -2,9 +2,8 @@ pandas
 openpyxl
 typer
 rapidfuzz
-pyyaml
 unidecode
 colorama
 PyQt6
 pyinstaller
-watchdog==3.0.0 
+watchdog==3.0.0

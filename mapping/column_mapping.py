@@ -1,11 +1,22 @@
-import yaml
+from config.constants import COLUMN_ALIASES
 from core.text_utils import normalize_column_name, is_similar
 
-def load_column_aliases(path='config/column_aliases.yml'):
-    with open(path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
 
-def auto_rename_columns(df, col_aliases, threshold=85):
+def load_column_aliases(path=None):
+    """
+    Charger les alias de colonnes
+    Maintenu pour compatibilité mais n'utilise plus de fichier
+    """
+    return COLUMN_ALIASES
+
+
+def auto_rename_columns(df, col_aliases=None, threshold=85):
+    """
+    Renommer automatiquement les colonnes selon les alias
+    """
+    if col_aliases is None:
+        col_aliases = COLUMN_ALIASES
+
     alias_map = {}
     canon_names = set()
     for canon, variants in col_aliases.items():
