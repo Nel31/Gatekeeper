@@ -3,9 +3,11 @@ from datetime import datetime
 import os
 from core.text_utils import is_semantic_change
 
-CSV_VARIATIONS = "data/variations_profils.csv"
-CSV_CHANGEMENTS = "data/changements_profils.csv"
-CSV_WHITELIST = "data/profils_valides.csv"  # Ancien fichier pour compatibilité
+from resource_path import data_path
+
+CSV_VARIATIONS = data_path("variations_profils.csv")
+CSV_CHANGEMENTS = data_path("changements_profils.csv")
+CSV_WHITELIST = data_path("profils_valides.csv")
 
 def charger_variations_profils(path=CSV_VARIATIONS):
     """Charger les variations d'écriture connues"""
