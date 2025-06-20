@@ -1,5 +1,6 @@
 """
 Page d'affichage des anomalies (Étape 2) - Version compacte et responsive
+Thème rouge bordeaux, noir et blanc
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
@@ -20,7 +21,7 @@ from mapping.directions_conservees import (
 
 
 class AnomaliesPage(QWidget):
-    """Page d'affichage des anomalies - Version ultra-compacte"""
+    """Page d'affichage des anomalies - Version ultra-compacte avec thème rouge bordeaux"""
     
     back_clicked = pyqtSignal()
     
@@ -55,13 +56,13 @@ class AnomaliesPage(QWidget):
         self.create_compact_navigation(layout)
     
     def create_compact_header(self, parent_layout):
-        """Header ultra-compact sur une seule ligne"""
+        """Header ultra-compact sur une seule ligne - Thème rouge bordeaux"""
         header_container = QWidget()
         header_container.setFixedHeight(50)  # Hauteur fixe réduite
         header_container.setStyleSheet("""
             QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #001122, stop:1 #000000);
+                    stop:0 #220000, stop:1 #000000);
                 border-radius: 8px;
             }
         """)
@@ -77,11 +78,11 @@ class AnomaliesPage(QWidget):
         
         header_layout.addStretch()
         
-        # Badge de statut compact
+        # Badge de statut compact - rouge bordeaux
         self.status_badge = QLabel("En analyse")
         self.status_badge.setStyleSheet("""
             QLabel {
-                background-color: #0066cc;
+                background-color: #800020;
                 color: white;
                 padding: 6px 12px;
                 border-radius: 15px;
@@ -94,7 +95,7 @@ class AnomaliesPage(QWidget):
         parent_layout.addWidget(header_container)
     
     def create_compact_stats(self, parent_layout):
-        """Statistiques compactes et responsives"""
+        """Statistiques compactes et responsives - Thème rouge bordeaux"""
         stats_container = QWidget()
         stats_container.setFixedHeight(60)  # Hauteur réduite
         stats_container.setStyleSheet("""
@@ -109,11 +110,11 @@ class AnomaliesPage(QWidget):
         stats_layout.setContentsMargins(10, 5, 10, 5)
         stats_layout.setSpacing(8)
         
-        # Stats compactes
-        self.create_compact_stat_widget("Total", "0", "#2196F3", stats_layout)
+        # Stats compactes avec couleurs du thème rouge
+        self.create_compact_stat_widget("Total", "0", "#B22222", stats_layout)
         self.create_compact_stat_widget("Anomalies", "0", "#FF9800", stats_layout)
-        self.create_compact_stat_widget("À vérifier", "0", "#F44336", stats_layout)
-        self.create_compact_stat_widget("Auto", "0", "#9C27B0", stats_layout)
+        self.create_compact_stat_widget("À vérifier", "0", "#800020", stats_layout)
+        self.create_compact_stat_widget("Auto", "0", "#A52A2A", stats_layout)
         self.create_compact_stat_widget("Conformes", "0", "#4CAF50", stats_layout)
         
         parent_layout.addWidget(stats_container)
@@ -154,7 +155,7 @@ class AnomaliesPage(QWidget):
         parent_layout.addWidget(stat_widget)
     
     def create_control_bar(self, parent_layout):
-        """Barre de contrôles compacte"""
+        """Barre de contrôles compacte - Thème rouge bordeaux"""
         control_container = QWidget()
         control_container.setFixedHeight(40)
         control_layout = QHBoxLayout(control_container)
@@ -183,7 +184,7 @@ class AnomaliesPage(QWidget):
                 font-size: 12px;
                 color: #fff;
             }
-            QLineEdit:focus { border: 2px solid #0066cc; }
+            QLineEdit:focus { border: 2px solid #800020; }
         """)
         self.search_input.textChanged.connect(self.filter_table)
         control_layout.addWidget(self.search_input)
@@ -213,13 +214,13 @@ class AnomaliesPage(QWidget):
         parent_layout.addWidget(control_container)
     
     def create_filter_buttons(self, parent_layout):
-        """Boutons de filtrage élégants (remplacent les tabs)"""
+        """Boutons de filtrage élégants - Thème rouge bordeaux"""
         self.filter_group = QButtonGroup()
         
         filters = [
-            ("manual", "⚠️ À vérifier", "#F44336"),
-            ("auto", "🤖 Auto", "#9C27B0"), 
-            ("validated", "✅ Conformes", "#4CAF50")
+            ("manual", "⚠️ À vérifier", "#800020"),    # Rouge bordeaux
+            ("auto", "🤖 Auto", "#A52A2A"),           # Rouge bordeaux clair
+            ("validated", "✅ Conformes", "#4CAF50")   # Vert conservé
         ]
         
         for filter_id, label, color in filters:
@@ -277,7 +278,7 @@ class AnomaliesPage(QWidget):
             QHeaderView::section {
                 background-color: #0a0a0a;
                 border: none;
-                border-bottom: 2px solid #0066cc;
+                border-bottom: 2px solid #800020;
                 padding: 10px 8px;
                 font-weight: bold;
                 color: #fff;
@@ -293,7 +294,7 @@ class AnomaliesPage(QWidget):
         parent_layout.addWidget(self.main_table)
     
     def create_compact_navigation(self, parent_layout):
-        """Navigation ultra-compacte"""
+        """Navigation ultra-compacte - Thème rouge bordeaux"""
         nav_container = QWidget()
         nav_container.setFixedHeight(45)
         nav_layout = QHBoxLayout(nav_container)
@@ -321,7 +322,7 @@ class AnomaliesPage(QWidget):
         self.validation_button.setFixedHeight(35)
         self.validation_button.setStyleSheet("""
             QPushButton {
-                background-color: #0066cc;
+                background-color: #800020;
                 border: none;
                 border-radius: 6px;
                 padding: 8px 20px;
@@ -329,7 +330,7 @@ class AnomaliesPage(QWidget):
                 font-weight: bold;
                 font-size: 12px;
             }
-            QPushButton:hover { background-color: #0080ff; }
+            QPushButton:hover { background-color: #A52A2A; }
         """)
         self.validation_button.clicked.connect(lambda: self.parent_window.go_to_step(2))
         nav_layout.addWidget(self.validation_button)
@@ -363,13 +364,13 @@ class AnomaliesPage(QWidget):
             self.fill_validated_data(data, headers)
     
     def fill_manual_data(self, data, headers):
-        """Remplir le tableau - Toujours afficher valeurs RH"""
+        """Remplir le tableau - Toujours afficher valeurs RH - Couleurs thème rouge"""
         self.main_table.setRowCount(len(data))
         self.main_table.setColumnCount(len(headers))
         self.main_table.setHorizontalHeaderLabels(headers)
         
         for i, (idx, row) in enumerate(data.iterrows()):
-            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
+            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#B22222"))
             self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
             
             # Anomalie avec indicateur visuel
@@ -393,13 +394,13 @@ class AnomaliesPage(QWidget):
         self.adjust_table_columns()
     
     def fill_auto_data(self, data, headers):
-        """Remplir les cas automatiques avec distinction visuelle"""
+        """Remplir les cas automatiques avec distinction visuelle - Couleurs thème rouge"""
         self.main_table.setRowCount(len(data))
         self.main_table.setColumnCount(len(headers))
         self.main_table.setHorizontalHeaderLabels(headers)
         
         for i, (idx, row) in enumerate(data.iterrows()):
-            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
+            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#B22222"))
             self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
             
             # Type d'automatisation
@@ -412,10 +413,10 @@ class AnomaliesPage(QWidget):
                 color = "#F44336"
             elif "inactif" in anomalie.lower():
                 type_text = "💤 Inactivité"
-                color = "#9C27B0"
+                color = "#A52A2A"  # Rouge bordeaux clair
             else:
                 type_text = "✓ Validé"
-                color = "#2196F3"
+                color = "#800020"  # Rouge bordeaux
             
             self.main_table.setItem(i, 2, self.create_styled_item(type_text, color))
             
@@ -435,7 +436,7 @@ class AnomaliesPage(QWidget):
         self.main_table.setHorizontalHeaderLabels(headers)
         
         for i, (idx, row) in enumerate(data.iterrows()):
-            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#0099ff"))
+            self.main_table.setItem(i, 0, self.create_styled_item(str(row['code_utilisateur']), "#B22222"))
             self.main_table.setItem(i, 1, self.create_styled_item(str(row['nom_prenom'])))
             self.main_table.setItem(i, 2, self.create_styled_item(str(row.get('profil', 'N/A'))))
             self.main_table.setItem(i, 3, self.create_styled_item(str(row.get('direction', 'N/A'))))
@@ -503,10 +504,10 @@ class AnomaliesPage(QWidget):
         self.stat_auto.setText(str(auto))
         self.stat_conformes.setText(str(validated))
         
-        # Badge modifié
+        # Badge modifié - couleurs thème rouge
         if manual == 0:
             self.status_badge.setText("✅ Complet")
-            self.status_badge.setStyleSheet(self.status_badge.styleSheet().replace("#0066cc", "#00cc44"))
+            self.status_badge.setStyleSheet(self.status_badge.styleSheet().replace("#800020", "#00cc44"))
         else:
             self.status_badge.setText(f"⚠️ {manual} changements réels")
         
@@ -584,11 +585,11 @@ class AnomaliesPage(QWidget):
         self.search_input.clear()
         self.anomaly_filter.setCurrentIndex(0)
         
-        # Réinitialiser le badge
+        # Réinitialiser le badge - couleur rouge bordeaux
         self.status_badge.setText("En analyse")
         self.status_badge.setStyleSheet("""
             QLabel {
-                background-color: #0066cc;
+                background-color: #800020;
                 color: white;
                 padding: 6px 12px;
                 border-radius: 15px;

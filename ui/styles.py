@@ -1,5 +1,5 @@
 """
-Styles CSS compatibles avec PyQt6 - Thème très sombre sans glassmorphism
+Styles CSS compatibles avec PyQt6 - Thème rouge bordeaux, noir et blanc
 """
 
 MAIN_STYLE = """
@@ -34,16 +34,16 @@ QPushButton:pressed {
 }
 
 QPushButton#primaryButton {
-    background-color: #0066cc;
-    border: 1px solid #0066cc;
+    background-color: #800020;
+    border: 1px solid #800020;
     color: #ffffff;
     font-size: 14px;
     font-weight: 700;
 }
 
 QPushButton#primaryButton:hover {
-    background-color: #0080ff;
-    border: 1px solid #0080ff;
+    background-color: #A52A2A;
+    border: 1px solid #A52A2A;
 }
 
 QPushButton#primaryButton:disabled {
@@ -78,7 +78,7 @@ QGroupBox::title {
     subcontrol-origin: margin;
     left: 20px;
     padding: 8px 16px;
-    background-color: #0066cc;
+    background-color: #800020;
     border-radius: 6px;
     color: #ffffff;
     font-weight: 700;
@@ -94,7 +94,7 @@ QLineEdit {
 }
 
 QLineEdit:focus {
-    border: 2px solid #0066cc;
+    border: 2px solid #800020;
     background-color: #1a1a1a;
 }
 
@@ -109,7 +109,7 @@ QProgressBar {
 }
 
 QProgressBar::chunk {
-    background-color: #0066cc;
+    background-color: #800020;
     border-radius: 5px;
 }
 
@@ -128,7 +128,7 @@ QTableWidget::item {
 }
 
 QTableWidget::item:selected {
-    background-color: #003366;
+    background-color: #400010;
     color: #ffffff;
 }
 
@@ -164,9 +164,9 @@ QTabBar::tab {
 }
 
 QTabBar::tab:selected {
-    background-color: #0066cc;
+    background-color: #800020;
     color: #ffffff;
-    border: 1px solid #0066cc;
+    border: 1px solid #800020;
 }
 
 QTabBar::tab:hover:!selected {
@@ -187,7 +187,7 @@ QListWidget::item {
 }
 
 QListWidget::item:selected {
-    background-color: #003366;
+    background-color: #400010;
 }
 
 QTextEdit {
@@ -199,7 +199,7 @@ QTextEdit {
 }
 
 QTextEdit:focus {
-    border: 2px solid #0066cc;
+    border: 2px solid #800020;
 }
 
 QScrollBar:vertical {
@@ -276,7 +276,7 @@ QMenu::item {
 }
 
 QMenu::item:selected {
-    background-color: #003366;
+    background-color: #400010;
     color: #ffffff;
 }
 
@@ -318,7 +318,7 @@ QComboBox QAbstractItemView {
     border: 1px solid #1a1a1a;
     border-radius: 6px;
     color: #ffffff;
-    selection-background-color: #003366;
+    selection-background-color: #400010;
 }
 
 QRadioButton {
@@ -338,12 +338,12 @@ QRadioButton::indicator:unchecked {
 }
 
 QRadioButton::indicator:checked {
-    border: 2px solid #0066cc;
-    background-color: #0066cc;
+    border: 2px solid #800020;
+    background-color: #800020;
 }
 
 QRadioButton::indicator:hover {
-    border: 2px solid #0080ff;
+    border: 2px solid #A52A2A;
     background-color: #1a1a1a;
 }
 """
@@ -351,11 +351,11 @@ QRadioButton::indicator:hover {
 STEP_ACTIVE_STYLE = """
 QLabel {
     border-radius: 15px;
-    background-color: #0066cc;
+    background-color: #800020;
     color: #ffffff;
     font-weight: 700;
     font-size: 14px;
-    border: 1px solid #0066cc;
+    border: 1px solid #800020;
 }
 """
 
@@ -383,7 +383,7 @@ QLabel {
 
 STEP_TEXT_ACTIVE_STYLE = """
 QLabel {
-    color: #0080ff;
+    color: #B22222;
     font-weight: 700;
     font-size: 13px;
 }
@@ -428,11 +428,11 @@ QRadioButton::indicator:unchecked {
     background-color: #0d0d0d;
 }
 QRadioButton::indicator:checked {
-    background-color: #0066cc;
-    border: 2px solid #0066cc;
+    background-color: #800020;
+    border: 2px solid #800020;
 }
 QRadioButton::indicator:hover {
-    border: 2px solid #0080ff;
+    border: 2px solid #A52A2A;
     background-color: #1a1a1a;
 }
 """
@@ -474,11 +474,11 @@ QLabel {
 
 INFO_MESSAGE_STYLE = """
 QLabel {
-    background-color: #001a33;
-    border: 2px solid #0066cc;
+    background-color: #1a0000;
+    border: 2px solid #800020;
     border-radius: 6px;
     padding: 16px;
-    color: #0099ff;
+    color: #B22222;
     font-size: 13px;
 }
 """
@@ -520,17 +520,18 @@ QLabel {
 
 FILE_DROP_HOVER_STYLE = """
 QLabel {
-    border: 2px dashed #0066cc;
-    background-color: #001a33;
-    color: #0099ff;
+    border: 2px dashed #800020;
+    background-color: #1a0000;
+    color: #B22222;
 }
 """
 
-# Couleurs pour les widgets de statistiques
+# Couleurs pour les widgets de statistiques - Thème rouge bordeaux
 STAT_COLORS = {
-    "blue": "0066cc",
-    "green": "00cc44", 
-    "orange": "ff9900",
-    "red": "ff3333",
-    "purple": "9900cc"
+    "red": "800020",        # Rouge bordeaux principal
+    "green": "00cc44",      # Vert conservé pour succès
+    "orange": "ff9900",     # Orange conservé pour avertissements
+    "burgundy": "A52A2A",   # Rouge bordeaux plus clair
+    "purple": "9900cc",     # Violet conservé
+    "blue": "800020"        # Bleu remplacé par rouge bordeaux
 }

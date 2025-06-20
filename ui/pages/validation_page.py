@@ -84,13 +84,13 @@ class ValidationPage(QWidget):
         self.create_navigation_section(layout)
     
     def create_compact_header(self, parent_layout):
-        """Header ultra-compact avec titre et progression"""
+        """Header ultra-compact avec titre et progression - Thème rouge bordeaux"""
         header_container = QWidget()
         header_container.setFixedHeight(60)  # Hauteur réduite
         header_container.setStyleSheet("""
             QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #001122, stop:1 #000000);
+                    stop:0 #220000, stop:1 #000000);
                 border-radius: 8px;
             }
         """)
@@ -110,15 +110,15 @@ class ValidationPage(QWidget):
         
         self.validation_counter = QLabel("Cas 1 sur 6")
         self.validation_counter.setStyleSheet("""
-            color: #0099ff; font-weight: bold; font-size: 13px; 
+            color: #B22222; font-weight: bold; font-size: 13px; 
             background: transparent; padding: 3px 10px;
-            border: 1px solid #0099ff; border-radius: 12px;
+            border: 1px solid #B22222; border-radius: 12px;
         """)
         title_row.addWidget(self.validation_counter)
         
         header_layout.addLayout(title_row)
         
-        # Barre de progression moderne
+        # Barre de progression moderne - rouge bordeaux
         self.validation_progress = QProgressBar()
         self.validation_progress.setFixedHeight(4)  # Plus fine
         self.validation_progress.setTextVisible(False)
@@ -129,7 +129,7 @@ class ValidationPage(QWidget):
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #0066cc, stop:1 #0099ff);
+                    stop:0 #800020, stop:1 #B22222);
                 border-radius: 2px;
             }
         """)
@@ -291,7 +291,7 @@ class ValidationPage(QWidget):
         parent_layout.addWidget(right_column, 25)  # 25% de l'espace
     
     def create_modern_card(self, title):
-        """Créer une card moderne avec titre"""
+        """Créer une card moderne avec titre - Thème rouge bordeaux"""
         card = QGroupBox(title)
         card.setStyleSheet("""
             QGroupBox {
@@ -308,7 +308,7 @@ class ValidationPage(QWidget):
                 subcontrol-origin: margin;
                 left: 15px;
                 padding: 6px 12px;
-                background-color: #0066cc;
+                background-color: #800020;
                 border-radius: 6px;
                 color: #ffffff;
                 font-weight: bold;
@@ -402,7 +402,7 @@ class ValidationPage(QWidget):
         return container
     
     def create_action_buttons(self, parent_layout):
-        """Créer les boutons d'action améliorés et responsives"""
+        """Créer les boutons d'action améliorés et responsives - Thème rouge bordeaux"""
         buttons_layout = QVBoxLayout()  # Layout vertical pour économiser l'espace
         buttons_layout.setSpacing(8)  # Espacement réduit
         
@@ -428,22 +428,22 @@ class ValidationPage(QWidget):
         self.skip_button.clicked.connect(self.skip_case)
         buttons_layout.addWidget(self.skip_button)
         
-        # Bouton "Valider" principal
+        # Bouton "Valider" principal - couleur rouge bordeaux
         self.validate_button = QPushButton("✅ Valider la décision")
         self.validate_button.setFixedHeight(40)  # Hauteur réduite
         self.validate_button.setStyleSheet("""
             QPushButton {
-                background-color: #00cc44;
+                background-color: #800020;
                 border: none;
                 border-radius: 5px;
                 padding: 8px 12px;
-                color: #000;
+                color: #ffffff;
                 font-weight: bold;
                 font-size: 12px;
             }
             QPushButton:hover { 
-                background-color: #00ff55;
-                color: #000;
+                background-color: #A52A2A;
+                color: #ffffff;
             }
         """)
         self.validate_button.clicked.connect(self.validate_decision)
@@ -452,7 +452,7 @@ class ValidationPage(QWidget):
         parent_layout.addLayout(buttons_layout)
     
     def create_navigation_section(self, parent_layout):
-        """Créer la section de navigation compacte"""
+        """Créer la section de navigation compacte - Thème rouge bordeaux"""
         nav_container = QWidget()
         nav_container.setFixedHeight(50)
         nav_layout = QHBoxLayout(nav_container)
@@ -478,7 +478,7 @@ class ValidationPage(QWidget):
         self.finish_validation_button = QPushButton("Terminer la validation →")
         self.finish_validation_button.setStyleSheet("""
             QPushButton {
-                background-color: #0066cc;
+                background-color: #800020;
                 border: none;
                 border-radius: 6px;
                 padding: 10px 24px;
@@ -486,7 +486,7 @@ class ValidationPage(QWidget):
                 font-weight: bold;
                 font-size: 13px;
             }
-            QPushButton:hover { background-color: #0080ff; }
+            QPushButton:hover { background-color: #A52A2A; }
         """)
         self.finish_validation_button.clicked.connect(lambda: self.parent_window.go_to_step(3))
         self.finish_validation_button.setVisible(False)
@@ -495,7 +495,7 @@ class ValidationPage(QWidget):
         parent_layout.addWidget(nav_container)
     
     def display_case_info(self, cas):
-        """Afficher les informations du cas avec mise en forme moderne"""
+        """Afficher les informations du cas avec mise en forme moderne - Thème rouge bordeaux"""
         try:
             jours = cas.get('days_inactive', '')
             if isinstance(jours, (int, float)) and not pd.isna(jours):
@@ -510,34 +510,34 @@ class ValidationPage(QWidget):
         
         info_html = f"""
         <div style="line-height: 1.8;">
-            <p><b style="color: #0099ff;">Code utilisateur:</b><br>
+            <p><b style="color: #B22222;">Code utilisateur:</b><br>
                <span style="font-size: 16px; color: #ffffff;">{cas.get('code_utilisateur', 'N/A')}</span></p>
             
-            <p><b style="color: #0099ff;">Nom/Prénom:</b><br>
+            <p><b style="color: #B22222;">Nom/Prénom:</b><br>
                <span style="font-size: 16px; color: #ffffff;">{cas.get('nom_prenom', 'N/A')}</span></p>
             
-            <p><b style="color: #0099ff;">Inactivité:</b><br>
+            <p><b style="color: #B22222;">Inactivité:</b><br>
                <span style="font-size: 14px; color: {inactivity_color};">{jours_affiche}</span></p>
         </div>
         """
         
         self.user_info_label.setText(info_html)
         
-        # Mettre à jour le badge d'anomalie
+        # Mettre à jour le badge d'anomalie avec couleurs thème rouge
         anomalie = cas.get('anomalie', 'N/A')
         self.anomaly_badge.setText(f"🚨 {anomalie}")
         
-        # Couleur du badge selon le type d'anomalie
+        # Couleur du badge selon le type d'anomalie - thème rouge bordeaux
         if "profil" in anomalie.lower():
-            badge_color = "#ff9800"
+            badge_color = "#A52A2A"   # Rouge bordeaux clair
         elif "direction" in anomalie.lower():
-            badge_color = "#2196f3"
+            badge_color = "#800020"   # Rouge bordeaux principal
         elif "non rh" in anomalie.lower():
-            badge_color = "#f44336"
+            badge_color = "#f44336"   # Rouge vif
         elif "inactif" in anomalie.lower():
-            badge_color = "#9c27b0"
+            badge_color = "#B22222"   # Rouge accent
         else:
-            badge_color = "#607d8b"
+            badge_color = "#607d8b"   # Gris conservé
         
         self.anomaly_badge.setStyleSheet(f"""
             QLabel {{
@@ -577,7 +577,7 @@ class ValidationPage(QWidget):
             self.create_info_section("ℹ️ Les profils et directions sont identiques dans les deux systèmes.")
     
     def create_comparison_section(self, title, value_ext, value_rh, has_difference):
-        """Créer une section de comparaison visuelle optimisée"""
+        """Créer une section de comparaison visuelle optimisée - Thème rouge bordeaux"""
         section = QWidget()
         section.setStyleSheet("""
             QWidget {
@@ -592,10 +592,10 @@ class ValidationPage(QWidget):
         section_layout.setContentsMargins(12, 10, 12, 10)  # Marges réduites
         section_layout.setSpacing(6)  # Espacement réduit
         
-        # Titre de la section
+        # Titre de la section - couleur rouge bordeaux
         title_label = QLabel(title)
         title_label.setStyleSheet("""
-            color: #0099ff; font-weight: bold; font-size: 13px;
+            color: #B22222; font-weight: bold; font-size: 13px;
             background: transparent;
         """)
         section_layout.addWidget(title_label)
@@ -606,9 +606,9 @@ class ValidationPage(QWidget):
         comparison_layout.setSpacing(10)  # Espacement réduit
         comparison_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Colonne Extraction
+        # Colonne Extraction - couleur rouge bordeaux pour différences
         ext_container = self.create_value_container(
-            "📤 Extraction", value_ext, "#ff9800" if has_difference else "#4caf50"
+            "📤 Extraction", value_ext, "#A52A2A" if has_difference else "#4caf50"
         )
         comparison_layout.addWidget(ext_container)
         
@@ -631,7 +631,7 @@ class ValidationPage(QWidget):
         self.comparison_layout.addWidget(section)
     
     def create_value_container(self, label, value, color):
-        """Créer un container pour une valeur avec style optimisé"""
+        """Créer un container pour une valeur avec style optimisé - Couleurs adaptées au thème rouge"""
         container = QWidget()
         container.setStyleSheet(f"""
             QWidget {{
