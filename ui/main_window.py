@@ -23,6 +23,7 @@ from ui.utils import (save_recent_files, load_recent_files, show_about_dialog,
                      show_documentation_dialog, show_question_message, 
                      show_error_message)
 from ui.dialogs.clear_data_dialog import ClearDataDialog
+from resource_path import persistent_data_path
 
 
 class CertificateurApp(QMainWindow):
@@ -124,7 +125,6 @@ class CertificateurApp(QMainWindow):
     def clear_selected_data(self, items):
         """Effacer les données sélectionnées"""
         import os
-        from resource_path import data_path
         
         if "Historique des fichiers récents" in items:
             self.settings.remove("recent_files")
@@ -133,21 +133,21 @@ class CertificateurApp(QMainWindow):
         if "Profils validés (whitelist)" in items:
             files = ["profils_valides.csv", "variations_profils.csv", "changements_profils.csv"]
             for f in files:
-                path = data_path(f)
+                path = persistent_data_path(f)
                 if os.path.exists(path):
                     os.remove(path)
         
         if "Directions conservées" in items:
             files = ["directions_conservees.csv", "variations_directions.csv", "changements_directions.csv"]
             for f in files:
-                path = data_path(f)
+                path = persistent_data_path(f)
                 if os.path.exists(path):
                     os.remove(path)
         
         if "Variations d'écriture" in items:
             files = ["variations_profils.csv", "variations_directions.csv"]
             for f in files:
-                path = data_path(f)
+                path = persistent_data_path(f)
                 if os.path.exists(path):
                     os.remove(path)
     

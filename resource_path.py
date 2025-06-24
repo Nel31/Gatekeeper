@@ -52,6 +52,38 @@ def config_path(filename):
     """
     return resource_path(os.path.join('config', filename))
 
+
+def get_persistent_data_path():
+    """
+    Obtenir le chemin pour les données persistantes (Windows)
+    
+    Returns:
+        str: Chemin vers le dossier de données persistantes
+    """
+    appdata = os.environ.get('APPDATA')
+    if appdata:
+        data_dir = os.path.join(appdata, 'Gatekeeper', 'data')
+    else:
+        # Fallback si APPDATA n'est pas défini
+        data_dir = os.path.join(os.path.expanduser('~'), 'Gatekeeper', 'data')
+    
+    # Créer le dossier s'il n'existe pas
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
+
+
+def persistent_data_path(filename):
+    """
+    Obtenir le chemin complet vers un fichier de données persistantes
+    
+    Args:
+        filename: Nom du fichier
+        
+    Returns:
+        str: Chemin complet vers le fichier
+    """
+    return os.path.join(get_persistent_data_path(), filename)
+
 # Exemple d'utilisation dans vos modules:
 #
 # from resource_path import data_path

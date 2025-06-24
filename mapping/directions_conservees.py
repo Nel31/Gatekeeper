@@ -3,11 +3,11 @@ from datetime import datetime
 import os
 from core.text_utils import is_semantic_change
 
-from resource_path import data_path
+from resource_path import persistent_data_path
 
-CSV_VARIATIONS_DIR = data_path("variations_directions.csv")
-CSV_CHANGEMENTS_DIR = data_path("changements_directions.csv")
-CSV_WHITELIST_DIR = data_path("directions_conservees.csv")
+CSV_VARIATIONS_DIR = persistent_data_path("variations_directions.csv")
+CSV_CHANGEMENTS_DIR = persistent_data_path("changements_directions.csv")
+CSV_WHITELIST_DIR = persistent_data_path("directions_conservees.csv")
 
 def charger_variations_directions(path=CSV_VARIATIONS_DIR):
     """Charger les variations d'écriture des directions connues"""
