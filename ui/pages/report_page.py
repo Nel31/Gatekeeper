@@ -291,10 +291,17 @@ class ReportPage(QWidget):
     
     def reset_page(self):
         """Réinitialiser la page"""
+        # Réinitialiser le message
         self.report_message.setText("")
-        self.final_stat_total.set_value("0")
-        self.final_stat_conserver.set_value("0")
-        self.final_stat_modifier.set_value("0")
-        self.final_stat_desactiver.set_value("0")
+        
+        # Réinitialiser les statistiques
+        self.stats_line.setText("""
+        <span style="color: #B22222;">Total: 0</span> &nbsp;|&nbsp; 
+        <span style="color: #4CAF50;">À conserver: 0</span> &nbsp;|&nbsp; 
+        <span style="color: #FF9800;">À modifier: 0</span> &nbsp;|&nbsp; 
+        <span style="color: #F44336;">À désactiver: 0</span>
+        """)
+        
+        # Réinitialiser l'aperçu
         self.report_preview.setRowCount(0)
         self.report_preview.setColumnCount(0)

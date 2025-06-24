@@ -860,6 +860,14 @@ class ValidationPage(QWidget):
     def reset_page(self):
         """Réinitialiser la page"""
         self.current_cas_index = 0
+        
+        # Réinitialiser les données
+        if hasattr(self, 'ext_df'):
+            self.ext_df = None
+        if hasattr(self, 'cas_a_verifier'):
+            self.cas_a_verifier = None
+        
+        # Réinitialiser l'interface
         self.validation_counter.setText("")
         self.user_info_label.setText("")
         self.comment_edit.clear()
@@ -869,6 +877,19 @@ class ValidationPage(QWidget):
         # Rendre les cards visibles à nouveau
         self.anomaly_card.setVisible(True)
         self.actions_card.setVisible(True)
+        
+        # Nettoyer la zone de comparaison
+        for i in reversed(range(self.comparison_layout.count())):
+            child = self.comparison_layout.itemAt(i).widget()
+            if child:
+                child.setParent(None)
+        
+        # Réinitialiser les radio buttons
+        if hasattr(self, 'radio_group'):
+            self.radio_group.setExclusive(False)
+            for button in self.radio_group.buttons():
+                button.setChecked(False)
+            self.radio_group.setExclusive(True)
 
     def set_data(self, df, certificateur):
         self.df = df
@@ -1063,30 +1084,3 @@ class ValidationPage(QWidget):
                     return
                     
         self.back_clicked.emit()
-        
-    def reset_page(self):
-        """Réinitialiser la page"""
-        self.current_cas_index = 0
-        
-        # Réinitialiser les données
-        if hasattr(self, 'ext_df'):
-            self.ext_df = None
-        if hasattr(self, 'cas_a_verifier'):
-            self.cas_a_verifier = None
-        
-        # Réinitialiser l'interface
-        self.validation_counter.setText("")
-        self.user_info_label.setText("")
-        self.comment_edit.clear()
-        self.validation_progress.setValue(0)
-        self.finish_validation_button.setVisible(False)
-        
-        # Rendre les cards visibles à nouveau
-        self.anomaly_card.setVisible(True)
-        self.actions_card.setVisible(True)
-        
-        # Nettoyer la zone de comparaison
-        for i in reversed(range(self.comparison_layout.count())):
-            child = self.comparison_layout.itemAt(i).widget()
-            if child:
-                child.setParent(None)

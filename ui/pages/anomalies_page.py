@@ -600,6 +600,7 @@ class AnomaliesPage(QWidget):
         
         # Réinitialiser la vue
         self.current_view = "manual"
+        
         # Cocher le bouton "À vérifier"
         for button in self.filter_group.buttons():
             if "À vérifier" in button.text():
