@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QLabel, QStackedWidget, QMenuBar, QMenu, 
-                            QMessageBox, QSizePolicy)
+                            QMessageBox, QSizePolicy, QDialog)
 from PyQt6.QtCore import Qt, QTimer, QSettings
 from PyQt6.QtGui import QAction, QFont
 
@@ -22,6 +22,7 @@ from ui.threads.processing_thread import ProcessingThread
 from ui.utils import (save_recent_files, load_recent_files, show_about_dialog,
                      show_documentation_dialog, show_question_message, 
                      show_error_message)
+from ui.dialogs.clear_data_dialog import ClearDataDialog
 
 
 class CertificateurApp(QMainWindow):
@@ -38,7 +39,7 @@ class CertificateurApp(QMainWindow):
         """Configurer la fenêtre principale"""
         self.setWindowTitle("Certificateur de Comptes - Gatekeeper")
         # Définir une taille minimale raisonnable
-        self.setMinimumSize(1000, 880)
+        self.setMinimumSize(1000, 800)
         # Permettre le redimensionnement
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setStyleSheet(MAIN_STYLE)
@@ -79,7 +80,15 @@ class CertificateurApp(QMainWindow):
         
         # Barre de statut
         self.create_status_bar()
-    
+
+    def show_clear_data_dialog(self):
+        """Afficher la boîte de dialogue pour effacer les données"""
+        dialog = ClearDataDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected_items = dialog.get_selected_items()
+            if selected_items:
+                self.confirm_and_clear_data(selected_items)
+        
     def create_menu_bar(self):
         """Créer la barre de menu"""
         menubar = self.menuBar()
@@ -89,6 +98,58 @@ class CertificateurApp(QMainWindow):
         
         # Menu Aide
         self.create_help_menu(menubar)
+    
+    def confirm_and_clear_data(self, items):
+        """Confirmer et effacer les données sélectionnées"""
+        # Construire le message de confirmation
+        items_text = "\n".join([f"• {item}" for item in items])
+        
+        reply = QMessageBox.warning(
+            self,
+            "Confirmation de suppression",
+            f"Vous êtes sur le point d'effacer définitivement :\n\n{items_text}\n\n"
+            "Cette action est irréversible. Voulez-vous continuer ?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.clear_selected_data(items)
+            QMessageBox.information(
+                self,
+                "Données effacées",
+                "Les données sélectionnées ont été effacées avec succès."
+            )
+
+    def clear_selected_data(self, items):
+        """Effacer les données sélectionnées"""
+        import os
+        from resource_path import data_path
+        
+        if "Historique des fichiers récents" in items:
+            self.settings.remove("recent_files")
+            self.update_recent_menu()
+        
+        if "Profils validés (whitelist)" in items:
+            files = ["profils_valides.csv", "variations_profils.csv", "changements_profils.csv"]
+            for f in files:
+                path = data_path(f)
+                if os.path.exists(path):
+                    os.remove(path)
+        
+        if "Directions conservées" in items:
+            files = ["directions_conservees.csv", "variations_directions.csv", "changements_directions.csv"]
+            for f in files:
+                path = data_path(f)
+                if os.path.exists(path):
+                    os.remove(path)
+        
+        if "Variations d'écriture" in items:
+            files = ["variations_profils.csv", "variations_directions.csv"]
+            for f in files:
+                path = data_path(f)
+                if os.path.exists(path):
+                    os.remove(path)
     
     def create_file_menu(self, menubar):
         """Créer le menu Fichier"""
@@ -107,12 +168,19 @@ class CertificateurApp(QMainWindow):
         
         file_menu.addSeparator()
         
+        # Effacer les données mémorisées
+        clear_data_action = QAction('Effacer les données mémorisées...', self)
+        clear_data_action.triggered.connect(self.show_clear_data_dialog)
+        file_menu.addAction(clear_data_action)
+        
+        file_menu.addSeparator()
+        
         # Quitter
         quit_action = QAction('Quitter', self)
         quit_action.setShortcut('Ctrl+Q')
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
-    
+
     def create_help_menu(self, menubar):
         """Créer le menu Aide"""
         help_menu = menubar.addMenu('Aide')
@@ -183,6 +251,9 @@ class CertificateurApp(QMainWindow):
         self.anomalies_page = AnomaliesPage(self)
         self.validation_page = ValidationPage(self)
         self.report_page = ReportPage(self)
+        
+        # Connecter le signal back_clicked de la page anomalies
+        self.anomalies_page.back_clicked.connect(lambda: self.go_to_step(0))
         
         # Ajouter au stack
         self.stack.addWidget(self.loading_page)
@@ -297,23 +368,23 @@ class CertificateurApp(QMainWindow):
             if reply != QMessageBox.StandardButton.Yes:
                 return
         
-            # Réinitialiser toutes les variables
-            self.ext_df = None
-            self.certificateur = ""
-            self.rh_paths = []
-            self.ext_path = ""
-            self.template_path = ""
-            
-            # Réinitialiser les pages
-            self.loading_page.reset_form()
-            self.anomalies_page.reset_page()
-            self.validation_page.reset_page()
-            self.report_page.reset_page()
-            
-            # Retourner à la première page
-            self.go_to_step(0)
-            
-            self.show_status_message("Application réinitialisée", 2000)
+        # Réinitialiser toutes les variables
+        self.ext_df = None
+        self.certificateur = ""
+        self.rh_paths = []
+        self.ext_path = ""
+        self.template_path = ""
+        
+        # Réinitialiser les pages
+        self.loading_page.reset_form()
+        self.anomalies_page.reset_page()
+        self.validation_page.reset_page()
+        self.report_page.reset_page()
+        
+        # Retourner à la première page
+        self.go_to_step(0)
+        
+        self.show_status_message("Application réinitialisée", 2000)
     
     def show_status_message(self, message, duration=0):
         """Afficher un message dans la barre de statut"""

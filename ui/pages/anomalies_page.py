@@ -607,11 +607,12 @@ class AnomaliesPage(QWidget):
                 break
 
     def on_back_clicked(self):
+        """Gérer le clic sur le bouton retour"""
         # Vérifier s'il y a des décisions non prises
-        if self.df is not None:
-            pending = self.df[
-                (~self.df['cas_automatique']) & 
-                (self.df['decision_manuelle'] == "")
+        if hasattr(self, 'ext_df') and self.ext_df is not None:
+            pending = self.ext_df[
+                (~self.ext_df['cas_automatique']) & 
+                (self.ext_df['decision_manuelle'] == "")
             ]
             
             if not pending.empty:
@@ -619,11 +620,15 @@ class AnomaliesPage(QWidget):
                     self,
                     "Décisions non prises",
                     "Il reste des décisions à prendre. Voulez-vous vraiment quitter ?",
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.No
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
                 )
                 
-                if reply == QMessageBox.No:
+                if reply == QMessageBox.StandardButton.No:
                     return
-                    
-        self.back_clicked.emit()
+        
+        # Émettre le signal ou appeler directement la méthode
+        if self.parent_window:
+            self.parent_window.go_to_step(0)
+        else:
+            self.back_clicked.emit()

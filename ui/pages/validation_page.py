@@ -19,7 +19,8 @@ from mapping.directions_conservees import (
     ajouter_direction_valide, ajouter_variation_direction, ajouter_changement_direction
 )
 from core.report import generer_rapport
-
+from PyQt6.QtWidgets import QGraphicsOpacityEffect
+from PyQt6.QtCore import QPropertyAnimation
 
 class ValidationPage(QWidget):
     """Page de validation manuelle avec UX moderne"""
@@ -82,11 +83,12 @@ class ValidationPage(QWidget):
         
         # Navigation en bas
         self.create_navigation_section(layout)
-    
+
+
     def create_compact_header(self, parent_layout):
         """Header ultra-compact avec titre et progression - Thème rouge bordeaux"""
         header_container = QWidget()
-        header_container.setFixedHeight(60)  # Hauteur réduite
+        header_container.setFixedHeight(50)  # Hauteur conservée (pas de hauteur supplémentaire pour la progression)
         header_container.setStyleSheet("""
             QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -95,14 +97,15 @@ class ValidationPage(QWidget):
             }
         """)
         
+        # Layout principal pour le contenu
         header_layout = QVBoxLayout(header_container)
-        header_layout.setContentsMargins(15, 8, 15, 8)  # Marges réduites
-        header_layout.setSpacing(6)  # Espacement réduit
+        header_layout.setContentsMargins(15, 8, 15, 0)  # Marges ajustées (bottom à 0)
+        header_layout.setSpacing(0)  # Pas d'espacement
         
         # Titre et compteur
         title_row = QHBoxLayout()
         title = QLabel("✅ Validation Manuelle")
-        title.setFont(QFont("Arial", 16, QFont.Weight.Bold))  # Taille réduite
+        title.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         title.setStyleSheet("color: #ffffff; background: transparent;")
         title_row.addWidget(title)
         
@@ -118,24 +121,31 @@ class ValidationPage(QWidget):
         
         header_layout.addLayout(title_row)
         
-        # Barre de progression moderne - rouge bordeaux
-        self.validation_progress = QProgressBar()
-        self.validation_progress.setFixedHeight(4)  # Plus fine
+        # Barre de progression comme underline subtil
+        self.validation_progress = QProgressBar(header_container)
+        self.validation_progress.setFixedHeight(3)  # Ultra fine
         self.validation_progress.setTextVisible(False)
         self.validation_progress.setStyleSheet("""
             QProgressBar {
-                background-color: #1a1a1a;
-                border-radius: 2px;
+                background-color: rgba(26, 26, 26, 0.5);
+                border: none;
+                border-radius: 0px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #800020, stop:1 #B22222);
-                border-radius: 2px;
+                border-radius: 0px;
             }
         """)
-        header_layout.addWidget(self.validation_progress)
+        # Positionner en bas du header comme underline
+        self.validation_progress.setGeometry(0, 47, header_container.width(), 3)
         
         parent_layout.addWidget(header_container)
+        
+        # Connecter le resize event pour ajuster la largeur de la barre
+        header_container.resizeEvent = lambda event: self.validation_progress.setGeometry(
+            0, 47, event.size().width(), 3
+        )
     
     def create_main_content(self, parent_layout):
         """Contenu principal responsive en 3 colonnes"""
@@ -1055,8 +1065,28 @@ class ValidationPage(QWidget):
         self.back_clicked.emit()
         
     def reset_page(self):
-        self.df = None
-        self.certificateur = None
-        self.table.setRowCount(0)
-        self.filter_combo.setCurrentText("Tous")
-        self.search_input.clear()
+        """Réinitialiser la page"""
+        self.current_cas_index = 0
+        
+        # Réinitialiser les données
+        if hasattr(self, 'ext_df'):
+            self.ext_df = None
+        if hasattr(self, 'cas_a_verifier'):
+            self.cas_a_verifier = None
+        
+        # Réinitialiser l'interface
+        self.validation_counter.setText("")
+        self.user_info_label.setText("")
+        self.comment_edit.clear()
+        self.validation_progress.setValue(0)
+        self.finish_validation_button.setVisible(False)
+        
+        # Rendre les cards visibles à nouveau
+        self.anomaly_card.setVisible(True)
+        self.actions_card.setVisible(True)
+        
+        # Nettoyer la zone de comparaison
+        for i in reversed(range(self.comparison_layout.count())):
+            child = self.comparison_layout.itemAt(i).widget()
+            if child:
+                child.setParent(None)

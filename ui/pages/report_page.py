@@ -15,6 +15,7 @@ from ui.utils import (set_decision_columns, get_last_directory,
                      show_info_message, show_error_message, open_file_with_system)
 from core.report import inject_to_template
 from core.anomalies import extraire_cas_a_verifier
+from PyQt6.QtCore import Qt, pyqtSignal
 
 
 class ReportPage(QWidget):
@@ -62,26 +63,28 @@ class ReportPage(QWidget):
     def create_final_stats_section(self, parent_layout):
         """Créer la section des statistiques finales"""
         self.final_stats_widget = QWidget()
+        self.final_stats_widget.setFixedHeight(50)  # Hauteur réduite
         self.final_stats_widget.setStyleSheet("""
             QWidget {
-                background-color: white;
+                background-color: #0a0a0a;
+                border: 1px solid #1a1a1a;
                 border-radius: 8px;
-                padding: 15px;
+                padding: 10px;
             }
         """)
-        final_stats_layout = QHBoxLayout(self.final_stats_widget)
         
-        self.final_stat_total = StatWidget("Total", "0", "#2196F3")
-        self.final_stat_conserver = StatWidget("À conserver", "0", "#4CAF50")
-        self.final_stat_modifier = StatWidget("À modifier", "0", "#FF9800")
-        self.final_stat_desactiver = StatWidget("À désactiver", "0", "#F44336")
+        stats_layout = QHBoxLayout(self.final_stats_widget)
+        stats_layout.setContentsMargins(15, 0, 15, 0)
         
-        final_stats_layout.addWidget(self.final_stat_total)
-        final_stats_layout.addWidget(self.final_stat_conserver)
-        final_stats_layout.addWidget(self.final_stat_modifier)
-        final_stats_layout.addWidget(self.final_stat_desactiver)
+        # Label unique pour toutes les stats
+        self.stats_line = QLabel()
+        self.stats_line.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.stats_line.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        self.stats_line.setStyleSheet("background: transparent;")
+        stats_layout.addWidget(self.stats_line)
         
         parent_layout.addWidget(self.final_stats_widget)
+
     
     def create_preview_section(self, parent_layout):
         """Créer la section aperçu du rapport"""
@@ -91,6 +94,7 @@ class ReportPage(QWidget):
         self.report_preview = QTableWidget()
         self.report_preview.setAlternatingRowColors(True)
         self.report_preview.setSortingEnabled(True)
+        self.report_preview.verticalHeader().setDefaultSectionSize(40)  # Hauteur de 40px par ligne
         preview_layout.addWidget(self.report_preview)
         
         preview_group.setLayout(preview_layout)
@@ -157,16 +161,20 @@ class ReportPage(QWidget):
             (self.ext_df['decision_manuelle'].isna())
         ])
         
-        self.final_stat_total.set_value(str(total))
-        self.final_stat_conserver.set_value(str(conserver))
-        self.final_stat_modifier.set_value(str(modifier))
-        self.final_stat_desactiver.set_value(str(desactiver))
+        # Créer le texte HTML avec couleurs
+        stats_html = f"""
+        <span style="color: #B22222;">Total: {total}</span> &nbsp;|&nbsp; 
+        <span style="color: #4CAF50;">À conserver: {conserver}</span> &nbsp;|&nbsp; 
+        <span style="color: #FF9800;">À modifier: {modifier}</span> &nbsp;|&nbsp; 
+        <span style="color: #F44336;">À désactiver: {desactiver}</span>
+        """
+        
+        self.stats_line.setText(stats_html)
         
         # Message de diagnostic si nécessaire
         if sans_decision > 0:
             print(f"⚠️ DIAGNOSTIC: {sans_decision} comptes sans décision détectés")
-            # Ces comptes recevront automatiquement la décision "Conserver" lors de la génération
-    
+
     def update_report_preview(self):
         """Mettre à jour l'aperçu du rapport"""
         # Préparer les données pour l'aperçu
