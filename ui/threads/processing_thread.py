@@ -9,6 +9,7 @@ from core.rh_utils import charger_et_preparer_rh
 from core.ext_utils import charger_et_preparer_ext
 from core.match_utils import associer_rh_aux_utilisateurs
 from core.anomalies import detecter_anomalies
+from security.encryption import encryption_manager
 
 
 class ProcessingThread(QThread):
@@ -27,6 +28,7 @@ class ProcessingThread(QThread):
     def run(self):
         """Exécuter le traitement des données"""
         try:
+            encryption_manager.initialize(self.certificateur)
             self.progress.emit("Chargement des fichiers RH...")
             rh_df = charger_et_preparer_rh(self.rh_paths)
             

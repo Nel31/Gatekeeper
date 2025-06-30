@@ -1,0 +1,135 @@
+---
+config:
+  layout: fixed
+  theme: redux
+  look: neo
+---
+flowchart TB
+ subgraph Legende["📖 LÉGENDE"]
+        L1["Données/Interface"]
+        L2["Traitement"]
+        L3["Décision"]
+        L4["Automatique"]
+        L5["Manuel"]
+        L6["Sortie/Rapport"]
+        L7["Stockage persistant"]
+  end
+ subgraph Notes["📌 NOTES IMPORTANTES"]
+    direction LR
+        N1["<b>Seuils configurables:</b><br>• Similarité: 85%<br>• Inactivité: 120 jours"]
+        N2["<b>Whitelist persistante:</b><br>• CSV dans AppData<br>• Apprentissage continu"]
+        N3["<b>Décisions auto:</b><br>• Inactifs → Désactiver<br>• Non RH → Désactiver<br>• Variations → Conserver"]
+  end
+    Start(["🚀 DÉBUT"]) --> Load["📁 ÉTAPE 1: CHARGEMENT<br>Interface de saisie"]
+    Cert[/"👤 Nom Certificateur"/] --> Load
+    RH[/"📊 Fichiers RH<br>Excel - Référentiel"/] --> Load
+    Extract[/"📄 Fichier Extraction<br>Export Application"/] --> Load
+    Template[/"📋 Template Rapport<br>Modèle Excel"/] --> Load
+    Load --> Process{"🔄 Traitement des données"}
+    Process --> Sub1["Chargement et préparation RH<br>charger_et_preparer_rh"] & Sub2["Chargement extraction<br>charger_et_preparer_ext<br>+ Filtrage suspendus"] & Sub3["Association RH ↔ Extraction<br>par code_utilisateur"]
+    Sub1 --> Detect["🔍 Détection Anomalies<br>detecter_anomalies"]
+    Sub2 --> Detect
+    Sub3 --> Detect
+    Detect --> TypeAnomaly@{ label: "Type d'anomalie<br>détectée?" }
+    TypeAnomaly -- Non RH --> NonRH["🚫 Compte non RH<br>Absent du référentiel"]
+    TypeAnomaly -- Inactif --> Inactive["💤 Inactivité<br>&gt; 120 jours"]
+    TypeAnomaly -- Profil --> ProfileCheck{"Analyse profil<br>Fuzzy + Sémantique"}
+    TypeAnomaly -- Direction --> DirectionCheck{"Analyse direction<br>Fuzzy + Sémantique"}
+    ProfileCheck -- Variation<br>≥85% similarité --> ProfileVar["📝 Variation profil<br>Ex: Dev → Développeur"]
+    ProfileCheck -- Changement<br>&lt;85% + sémantique --> ProfileChange["🔄 Changement profil<br>Ex: Dev → Chef projet"]
+    DirectionCheck -- Variation --> DirVar["📝 Variation direction<br>Ex: DSI → D.S.I."]
+    DirectionCheck -- Changement --> DirChange["🔄 Changement direction<br>Ex: DSI → Marketing"]
+    NonRH --> AutoDecision["🤖 Décision Auto:<br>DÉSACTIVER"]
+    Inactive --> AutoDecision
+    ProfileVar --> AutoConserve["🤖 Décision Auto:<br>CONSERVER + Whitelist"]
+    DirVar --> AutoConserve
+    AutoConserve --> Whitelist[("💾 WHITELIST<br>profils_valides.csv<br>directions_conservees.csv")] & ShowAnomalies["🔍 ÉTAPE 2: ANOMALIES<br>Tableau avec filtres"]
+    AutoDecision --> ShowAnomalies
+    ProfileChange --> ShowAnomalies
+    DirChange --> ShowAnomalies
+    ShowAnomalies --> ViewTabs{"Onglets de vue"}
+    ViewTabs --> Tab1["📌 À vérifier<br>Cas manuels"] & Tab2["🤖 Auto<br>Cas traités auto"] & Tab3["✅ Conformes<br>Sans anomalie"]
+    Tab1 --> NeedValidation{"Cas nécessitant<br>validation?"}
+    NeedValidation -- OUI --> Validation["✅ ÉTAPE 3: VALIDATION<br>Interface cas par cas"]
+    Validation --> ShowCase["Affichage du cas:<br>• Info utilisateur<br>• Comparaison Ext ↔ RH<br>• Type anomalie"]
+    ShowCase --> DecisionChoice{"💭 Décision<br>du certificateur"}
+    DecisionChoice -- Modifier --> Modify["✏️ MODIFIER<br>Sync avec RH"]
+    DecisionChoice -- Conserver --> Keep@{ label: "✓ CONSERVER<br>Tolérer l'écart" }
+    DecisionChoice -- Désactiver --> Disable["❌ DÉSACTIVER<br>Supprimer compte"]
+    DecisionChoice -- Passer --> Skip["⏭️ PASSER<br>Décider plus tard"]
+    Modify --> UpdateWhitelist["Ajout whitelist<br>si changement validé"] & Comment["💬 Commentaire<br>optionnel"]
+    Keep --> UpdateWhitelist & Comment
+    UpdateWhitelist --> Whitelist
+    Disable --> Comment
+    Comment --> NextCase{"Reste des cas<br>à traiter?"}
+    Skip --> NextCase
+    NextCase -- OUI --> ShowCase
+    NextCase -- NON --> Report["📊 ÉTAPE 4: RAPPORT<br>Préparation données"]
+    NeedValidation -- NON --> Report
+    Report --> PrepareData["Préparer données:<br>• set_decision_columns<br>• Mapping labels<br>• Date certification"]
+    PrepareData --> InjectTemplate["💉 inject_to_template<br>Remplissage Excel"]
+    InjectTemplate --> FinalReport[/"📄 RAPPORT FINAL<br>rapport_certification_YYYYMMDD.xlsx"/]
+    FinalReport --> Stats["📈 Statistiques affichées:<br>• Total: X comptes<br>• À conserver: X<br>• À modifier: X<br>• À désactiver: X"]
+    Stats --> End(["🏁 FIN<br>Nouvelle certification possible"])
+    TypeAnomaly@{ shape: diamond}
+    Keep@{ shape: rect}
+     L1:::data
+     L2:::process
+     L3:::decision
+     L4:::auto
+     L5:::manual
+     L6:::output
+     L7:::storage
+     Start:::startEnd
+     Load:::data
+     Cert:::data
+     RH:::data
+     Extract:::data
+     Template:::data
+     Process:::process
+     Sub1:::process
+     Sub2:::process
+     Sub3:::process
+     Detect:::process
+     TypeAnomaly:::decision
+     NonRH:::auto
+     Inactive:::auto
+     ProfileCheck:::decision
+     DirectionCheck:::decision
+     ProfileVar:::auto
+     ProfileChange:::manual
+     DirVar:::auto
+     DirChange:::manual
+     AutoDecision:::auto
+     AutoConserve:::auto
+     Whitelist:::storage
+     ShowAnomalies:::data
+     ViewTabs:::decision
+     Tab1:::manual
+     Tab2:::auto
+     Tab3:::data
+     NeedValidation:::decision
+     Validation:::manual
+     ShowCase:::data
+     DecisionChoice:::decision
+     Modify:::manual
+     Keep:::manual
+     Disable:::manual
+     Skip:::manual
+     UpdateWhitelist:::storage
+     Comment:::data
+     NextCase:::decision
+     Report:::output
+     PrepareData:::process
+     InjectTemplate:::process
+     FinalReport:::output
+     Stats:::data
+     End:::startEnd
+    classDef startEnd fill:#f9f9f9,stroke:#333,stroke-width:3px,color:#000
+    classDef data fill:#98fb98,stroke:#333,stroke-width:2px,color:#000
+    classDef process fill:#87ceeb,stroke:#333,stroke-width:2px,color:#000
+    classDef decision fill:#ffd700,stroke:#333,stroke-width:2px,color:#000
+    classDef auto fill:#dda0dd,stroke:#333,stroke-width:2px,color:#000
+    classDef manual fill:#ffb6c1,stroke:#333,stroke-width:2px,color:#000
+    classDef output fill:#ffa500,stroke:#333,stroke-width:2px,color:#000
+    classDef storage fill:#e6f3ff,stroke:#333,stroke-width:2px,color:#000

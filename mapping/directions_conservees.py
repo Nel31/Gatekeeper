@@ -2,24 +2,32 @@ import pandas as pd
 from datetime import datetime
 import os
 from core.text_utils import is_semantic_change
-
 from resource_path import persistent_data_path
+from security.encryption import encryption_manager
 
 CSV_VARIATIONS_DIR = persistent_data_path("variations_directions.csv")
 CSV_CHANGEMENTS_DIR = persistent_data_path("changements_directions.csv")
 CSV_WHITELIST_DIR = persistent_data_path("directions_conservees.csv")
 
 def charger_variations_directions(path=CSV_VARIATIONS_DIR):
-    """Charger les variations d'écriture des directions connues"""
-    if not os.path.exists(path):
+    """Charger les variations d'écriture des directions connues avec déchiffrement"""
+    if not encryption_manager.is_initialized():
+        # Fallback: charger en mode non chiffré si pas initialisé
+        if os.path.exists(path):
+            return pd.read_csv(path)
         return pd.DataFrame(columns=["direction_extraction", "direction_rh", "date_validation", "certificateur", "type_variation"])
-    return pd.read_csv(path)
+    
+    return encryption_manager.load_encrypted_csv(path)
 
 def charger_changements_directions(path=CSV_CHANGEMENTS_DIR):
-    """Charger les changements réels de directions validés"""
-    if not os.path.exists(path):
+    """Charger les changements réels de directions validés avec déchiffrement"""
+    if not encryption_manager.is_initialized():
+        # Fallback: charger en mode non chiffré si pas initialisé
+        if os.path.exists(path):
+            return pd.read_csv(path)
         return pd.DataFrame(columns=["direction_extraction", "direction_rh", "date_validation", "certificateur", "type_changement"])
-    return pd.read_csv(path)
+    
+    return encryption_manager.load_encrypted_csv(path)
 
 def charger_directions_conservees(path=CSV_WHITELIST_DIR):
     """Charger toutes les directions validées (compatibilité)"""
@@ -72,7 +80,7 @@ def ajouter_direction_valide(row, certificateur, path=CSV_WHITELIST_DIR):
         ajouter_changement_direction(row, certificateur)
 
 def ajouter_variation_direction(row, certificateur, path=CSV_VARIATIONS_DIR):
-    """Ajouter une variation d'écriture de direction"""
+    """Ajouter une variation d'écriture de direction avec chiffrement"""
     variations = charger_variations_directions(path)
     nv = {
         "direction_extraction": row['direction'],
@@ -83,10 +91,15 @@ def ajouter_variation_direction(row, certificateur, path=CSV_VARIATIONS_DIR):
     }
     variations = pd.concat([variations, pd.DataFrame([nv])], ignore_index=True)
     variations.drop_duplicates(subset=['direction_extraction', 'direction_rh'], inplace=True)
-    variations.to_csv(path, index=False)
+    
+    # Sauvegarder avec chiffrement si disponible
+    if encryption_manager.is_initialized():
+        encryption_manager.save_encrypted_csv(variations, path)
+    else:
+        variations.to_csv(path, index=False)
 
 def ajouter_changement_direction(row, certificateur, type_changement="evolution", path=CSV_CHANGEMENTS_DIR):
-    """Ajouter un changement réel de direction"""
+    """Ajouter un changement réel de direction avec chiffrement"""
     changements = charger_changements_directions(path)
     nv = {
         "direction_extraction": row['direction'],
@@ -97,7 +110,12 @@ def ajouter_changement_direction(row, certificateur, type_changement="evolution"
     }
     changements = pd.concat([changements, pd.DataFrame([nv])], ignore_index=True)
     changements.drop_duplicates(subset=['direction_extraction', 'direction_rh'], inplace=True)
-    changements.to_csv(path, index=False)
+    
+    # Sauvegarder avec chiffrement si disponible
+    if encryption_manager.is_initialized():
+        encryption_manager.save_encrypted_csv(changements, path)
+    else:
+        changements.to_csv(path, index=False)
 
 def est_direction_conservee(row, directions_conservees=None):
     """Vérifier si un changement de direction est déjà validé"""

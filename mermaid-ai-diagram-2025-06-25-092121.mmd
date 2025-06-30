@@ -1,0 +1,60 @@
+---
+config:
+  layout: fixed
+  theme: redux
+---
+flowchart TD
+  subgraph s1["Légende"]
+    L1["🤖<br>Automatique"]
+    L2["👤<br>Manuel"]
+    L3["💾<br>Persistant"]
+  end
+    Start(["DÉBUT"]) --> Load["📁 Chargement des fichiers<br>RH + Extraction + Template"]
+    Load --> Process["⚙️ Traitement<br>Association + Détection anomalies"]
+    Process --> Anomalies{"🔍 Anomalies<br>détectées?"}
+    Anomalies -- NON --> Direct["Comptes conformes"]
+    Anomalies -- OUI --> TypeCheck@{ label: "Type<br>d'anomalie?" }
+    TypeCheck -- "Inactif/Non-RH" --> Auto1["🤖 Auto: DÉSACTIVER"]
+    TypeCheck -- Variation écriture --> Auto2["🤖 Auto: CONSERVER<br>+ Whitelist"]
+    TypeCheck -- Changement réel --> Manual["👤 Validation manuelle<br>requise"]
+    Manual --> Val["✅ Page validation<br>Cas par cas"]
+    Val --> Decision{"Décision?"}
+    Decision -- Modifier --> Dec1["Sync RH + Whitelist"]
+    Decision -- Conserver --> Dec2["Accepter + Whitelist"]
+    Decision -- Désactiver --> Dec3["Supprimer compte"]
+    Direct --> Report["📊 Génération rapport<br>Excel avec toutes décisions"]
+    Auto1 --> Report
+    Auto2 --> Report
+    Dec1 --> Report
+    Dec2 --> Report
+    Dec3 --> Report
+    Report --> End(["FIN"])
+    Auto2 -.-> WL[("💾 Whitelist<br>Apprentissage")]
+    Dec1 -.-> WL
+    Dec2 -.-> WL
+    TypeCheck@{ shape: diamond}
+    L1:::auto
+    L2:::manual
+    L3:::input
+    Load:::input
+    Process:::process
+    Anomalies:::decision
+    Direct:::process
+    TypeCheck:::decision
+    Auto1:::auto
+    Auto2:::auto
+    Manual:::manual
+    Val:::manual
+    Decision:::decision
+    Dec1:::manual
+    Dec2:::manual
+    Dec3:::manual
+    Report:::output
+    WL:::input
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000;
+    classDef input fill:#e3f2fd,stroke:#2196f3,stroke-width:2px,color:#000;
+    classDef process fill:#e8f5e9,stroke:#4caf50,stroke-width:2px,color:#000;
+    classDef decision fill:#fff3e0,stroke:#ff9800,stroke-width:2px,color:#000;
+    classDef auto fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px,color:#000;
+    classDef manual fill:#fce4ec,stroke:#e91e63,stroke-width:2px,color:#000;
+    classDef output fill:#fff8e1,stroke:#ffc107,stroke-width:2px,color:#000;

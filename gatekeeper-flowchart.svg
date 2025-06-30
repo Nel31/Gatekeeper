@@ -1,0 +1,228 @@
+<svg viewBox="0 0 1200 2400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Définitions des styles -->
+  <defs>
+    <style>
+      .box { fill: #f0f0f0; stroke: #333; stroke-width: 2; }
+      .decision { fill: #ffd700; stroke: #333; stroke-width: 2; }
+      .process { fill: #87ceeb; stroke: #333; stroke-width: 2; }
+      .data { fill: #98fb98; stroke: #333; stroke-width: 2; }
+      .automatic { fill: #dda0dd; stroke: #333; stroke-width: 2; }
+      .manual { fill: #ffb6c1; stroke: #333; stroke-width: 2; }
+      .output { fill: #ffa500; stroke: #333; stroke-width: 2; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; text-anchor: middle; }
+      .title { font-size: 18px; font-weight: bold; }
+      .arrow { fill: none; stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+      .arrow-green { stroke: #4caf50; }
+      .arrow-red { stroke: #f44336; }
+      .arrow-orange { stroke: #ff9800; }
+    </style>
+    
+    <!-- Flèche -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333" />
+    </marker>
+  </defs>
+  
+  <!-- Titre -->
+  <text x="600" y="30" class="text title">Logigramme - Certificateur de Comptes Gatekeeper</text>
+  
+  <!-- Début -->
+  <ellipse cx="600" cy="80" rx="60" ry="30" class="box"/>
+  <text x="600" y="85" class="text">DÉBUT</text>
+  
+  <!-- Étape 1: Chargement des fichiers -->
+  <rect x="450" y="130" width="300" height="60" class="data" rx="5"/>
+  <text x="600" y="150" class="text">📁 ÉTAPE 1: CHARGEMENT</text>
+  <text x="600" y="170" class="text" font-size="12">Saisie certificateur + fichiers</text>
+  
+  <path d="M 600 110 L 600 130" class="arrow"/>
+  
+  <!-- Inputs -->
+  <polygon points="300,220 400,190 400,250 300,250" class="data"/>
+  <text x="350" y="210" class="text" font-size="12">Fichiers RH</text>
+  <text x="350" y="230" class="text" font-size="12">(1 ou plusieurs)</text>
+  
+  <polygon points="520,220 620,190 620,250 520,250" class="data"/>
+  <text x="570" y="210" class="text" font-size="12">Fichier</text>
+  <text x="570" y="230" class="text" font-size="12">Extraction</text>
+  
+  <polygon points="740,220 840,190 840,250 740,250" class="data"/>
+  <text x="790" y="210" class="text" font-size="12">Template</text>
+  <text x="790" y="230" class="text" font-size="12">Rapport</text>
+  
+  <path d="M 350 250 L 600 280" class="arrow"/>
+  <path d="M 570 250 L 600 280" class="arrow"/>
+  <path d="M 790 250 L 600 280" class="arrow"/>
+  
+  <!-- Traitement -->
+  <rect x="450" y="280" width="300" height="60" class="process" rx="5"/>
+  <text x="600" y="300" class="text">🔄 TRAITEMENT DES DONNÉES</text>
+  <text x="600" y="320" class="text" font-size="12">Association RH + Détection anomalies</text>
+  
+  <path d="M 600 190 L 600 280" class="arrow"/>
+  
+  <!-- Types d'anomalies -->
+  <rect x="100" y="380" width="200" height="120" class="automatic" rx="5"/>
+  <text x="200" y="400" class="text" font-weight="bold">ANOMALIES DÉTECTÉES</text>
+  <text x="200" y="420" class="text" font-size="12">• Compte non RH</text>
+  <text x="200" y="440" class="text" font-size="12">• Changement profil</text>
+  <text x="200" y="460" class="text" font-size="12">• Changement direction</text>
+  <text x="200" y="480" class="text" font-size="12">• Inactivité >120 jours</text>
+  
+  <path d="M 450 340 L 300 380" class="arrow"/>
+  
+  <!-- Décision automatique -->
+  <polygon points="600,390 750,440 600,490 450,440" class="decision"/>
+  <text x="600" y="430" class="text">Cas traitable</text>
+  <text x="600" y="450" class="text">automatiquement?</text>
+  
+  <path d="M 600 340 L 600 390" class="arrow"/>
+  
+  <!-- Traitement automatique -->
+  <rect x="800" y="410" width="250" height="60" class="automatic" rx="5"/>
+  <text x="925" y="430" class="text">🤖 TRAITEMENT AUTO</text>
+  <text x="925" y="450" class="text" font-size="12">Désactiver inactifs + non RH</text>
+  
+  <path d="M 750 440 L 800 440" class="arrow-green"/>
+  <text x="775" y="435" class="text" font-size="12">OUI</text>
+  
+  <!-- Étape 2: Affichage anomalies -->
+  <rect x="450" y="530" width="300" height="60" class="data" rx="5"/>
+  <text x="600" y="550" class="text">🔍 ÉTAPE 2: ANOMALIES</text>
+  <text x="600" y="570" class="text" font-size="12">Vue tableau avec filtres</text>
+  
+  <path d="M 600 490 L 600 530" class="arrow-red"/>
+  <text x="575" y="515" class="text" font-size="12">NON</text>
+  <path d="M 925 470 L 925 560 L 750 560" class="arrow"/>
+  
+  <!-- Décision validation -->
+  <polygon points="600,630 750,680 600,730 450,680" class="decision"/>
+  <text x="600" y="670" class="text">Cas à valider</text>
+  <text x="600" y="690" class="text">manuellement?</text>
+  
+  <path d="M 600 590 L 600 630" class="arrow"/>
+  
+  <!-- Étape 3: Validation manuelle -->
+  <rect x="450" y="780" width="300" height="60" class="manual" rx="5"/>
+  <text x="600" y="800" class="text">✅ ÉTAPE 3: VALIDATION</text>
+  <text x="600" y="820" class="text" font-size="12">Cas par cas avec décisions</text>
+  
+  <path d="M 600 730 L 600 780" class="arrow-green"/>
+  <text x="575" y="760" class="text" font-size="12">OUI</text>
+  
+  <!-- Décisions possibles -->
+  <rect x="100" y="880" width="180" height="100" class="manual" rx="5"/>
+  <text x="190" y="900" class="text" font-weight="bold">DÉCISIONS</text>
+  <text x="190" y="920" class="text" font-size="12">✏️ Modifier (sync RH)</text>
+  <text x="190" y="940" class="text" font-size="12">✓ Conserver (whitelist)</text>
+  <text x="190" y="960" class="text" font-size="12">❌ Désactiver</text>
+  
+  <path d="M 450 810 L 280 930" class="arrow"/>
+  
+  <!-- Whitelist update -->
+  <rect x="320" y="900" width="200" height="60" class="data" rx="5"/>
+  <text x="420" y="920" class="text">📝 MAJ WHITELIST</text>
+  <text x="420" y="940" class="text" font-size="12">Profils/Directions validés</text>
+  
+  <path d="M 280 930 L 320 930" class="arrow"/>
+  
+  <!-- Décision pour chaque cas -->
+  <polygon points="600,880 700,930 600,980 500,930" class="decision"/>
+  <text x="600" y="920" class="text">Reste des cas</text>
+  <text x="600" y="940" class="text">à traiter?</text>
+  
+  <path d="M 600 840 L 600 880" class="arrow"/>
+  
+  <!-- Retour validation -->
+  <path d="M 700 930 L 780 930 L 780 810 L 750 810" class="arrow-green"/>
+  <text x="740" y="925" class="text" font-size="12">OUI</text>
+  
+  <!-- Étape 4: Rapport -->
+  <rect x="450" y="1030" width="300" height="60" class="output" rx="5"/>
+  <text x="600" y="1050" class="text">📊 ÉTAPE 4: RAPPORT</text>
+  <text x="600" y="1070" class="text" font-size="12">Génération rapport Excel</text>
+  
+  <path d="M 600 980 L 600 1030" class="arrow-red"/>
+  <text x="625" y="1010" class="text" font-size="12">NON</text>
+  
+  <!-- Bypass si pas de cas manuels -->
+  <path d="M 750 680 L 850 680 L 850 1060 L 750 1060" class="arrow-orange"/>
+  <text x="800" y="675" class="text" font-size="12">NON</text>
+  
+  <!-- Template injection -->
+  <rect x="450" y="1130" width="300" height="60" class="process" rx="5"/>
+  <text x="600" y="1150" class="text">💉 INJECTION TEMPLATE</text>
+  <text x="600" y="1170" class="text" font-size="12">Mapping colonnes + décisions</text>
+  
+  <path d="M 600 1090 L 600 1130" class="arrow"/>
+  
+  <!-- Output final -->
+  <polygon points="500,1230 700,1230 720,1280 480,1280" class="output"/>
+  <text x="600" y="1250" class="text">📄 RAPPORT EXCEL</text>
+  <text x="600" y="1270" class="text" font-size="12">Avec certificateur + date</text>
+  
+  <path d="M 600 1190 L 600 1230" class="arrow"/>
+  
+  <!-- Statistiques finales -->
+  <rect x="800" y="1200" width="250" height="100" class="data" rx="5"/>
+  <text x="925" y="1220" class="text" font-weight="bold">STATISTIQUES FINALES</text>
+  <text x="925" y="1240" class="text" font-size="12">• Total comptes traités</text>
+  <text x="925" y="1260" class="text" font-size="12">• Décisions prises</text>
+  <text x="925" y="1280" class="text" font-size="12">• Cas par type</text>
+  
+  <path d="M 720 1255 L 800 1250" class="arrow"/>
+  
+  <!-- Fin -->
+  <ellipse cx="600" cy="1350" rx="60" ry="30" class="box"/>
+  <text x="600" y="1355" class="text">FIN</text>
+  
+  <path d="M 600 1280 L 600 1320" class="arrow"/>
+  
+  <!-- Légende -->
+  <rect x="50" y="1450" width="1100" height="200" fill="none" stroke="#999" stroke-dasharray="5,5"/>
+  <text x="600" y="1480" class="text title">LÉGENDE</text>
+  
+  <rect x="100" y="1500" width="100" height="40" class="data" rx="5"/>
+  <text x="250" y="1525" class="text">Données/Fichiers</text>
+  
+  <rect x="100" y="1550" width="100" height="40" class="process" rx="5"/>
+  <text x="250" y="1575" class="text">Traitement</text>
+  
+  <rect x="400" y="1500" width="100" height="40" class="automatic" rx="5"/>
+  <text x="550" y="1525" class="text">Automatique</text>
+  
+  <rect x="400" y="1550" width="100" height="40" class="manual" rx="5"/>
+  <text x="550" y="1575" class="text">Manuel</text>
+  
+  <polygon points="750,1510 800,1520 750,1530 700,1520" class="decision"/>
+  <text x="850" y="1525" class="text">Décision</text>
+  
+  <rect x="700" y="1550" width="100" height="40" class="output" rx="5"/>
+  <text x="850" y="1575" class="text">Sortie/Résultat</text>
+  
+  <!-- Notes importantes -->
+  <text x="100" y="1700" class="text" font-size="14" font-weight="bold">NOTES IMPORTANTES:</text>
+  <text x="100" y="1730" class="text" font-size="12" text-anchor="start">• Les comptes inactifs et non-RH sont automatiquement désactivés</text>
+  <text x="100" y="1750" class="text" font-size="12" text-anchor="start">• Les variations d'écriture (profil/direction) sont auto-conservées et ajoutées à la whitelist</text>
+  <text x="100" y="1770" class="text" font-size="12" text-anchor="start">• Seuls les changements réels nécessitent une validation manuelle</text>
+  <text x="100" y="1790" class="text" font-size="12" text-anchor="start">• La whitelist est persistante entre les sessions de certification</text>
+  
+  <!-- Types de changements -->
+  <text x="100" y="1850" class="text" font-size="14" font-weight="bold">TYPES DE CHANGEMENTS:</text>
+  <text x="100" y="1880" class="text" font-size="12" text-anchor="start">• Variation: Différence d'écriture mais même sens (ex: "Dev" vs "Développeur")</text>
+  <text x="100" y="1900" class="text" font-size="12" text-anchor="start">• Changement: Modification réelle du poste/service (ex: "Développeur" → "Chef de projet")</text>
+  
+  <!-- Flux de données -->
+  <text x="100" y="1960" class="text" font-size="14" font-weight="bold">FLUX DES DONNÉES:</text>
+  <text x="100" y="1990" class="text" font-size="12" text-anchor="start">1. Chargement: RH (référence) + Extraction (à auditer) + Template</text>
+  <text x="100" y="2010" class="text" font-size="12" text-anchor="start">2. Association: Match par code_utilisateur</text>
+  <text x="100" y="2030" class="text" font-size="12" text-anchor="start">3. Détection: Comparaison fuzzy + analyse sémantique</text>
+  <text x="100" y="2050" class="text" font-size="12" text-anchor="start">4. Décision: Auto (règles) ou Manuelle (certificateur)</text>
+  <text x="100" y="2070" class="text" font-size="12" text-anchor="start">5. Rapport: Injection dans template avec toutes les décisions</text>
+  
+  <!-- Seuils -->
+  <text x="100" y="2130" class="text" font-size="14" font-weight="bold">SEUILS CONFIGURABLES:</text>
+  <text x="100" y="2160" class="text" font-size="12" text-anchor="start">• Similarité texte: 85% (fuzzy matching)</text>
+  <text x="100" y="2180" class="text" font-size="12" text-anchor="start">• Inactivité: 120 jours</text>
+  <text x="100" y="2200" class="text" font-size="12" text-anchor="start">• Analyse sémantique pour détecter les changements réels vs variations</text>
+</svg>

@@ -5,6 +5,7 @@ from core.match_utils import associer_rh_aux_utilisateurs
 from core.anomalies import detecter_anomalies, extraire_cas_a_verifier, extraire_cas_automatiques
 from core.manual_review import traiter_cas_manuels
 from core.report import inject_to_template
+from security.encryption import encryption_manager
 
 # Mapping centralisé des décisions
 DECISION_TO_LABEL = {
@@ -35,6 +36,8 @@ def run(
     output_file: str = typer.Option(..., help="Fichier de rapport à générer"),
     cert_name: str = typer.Option(..., help="Nom du certificateur"),
 ):
+    # NOUVELLE LIGNE: Initialiser le chiffrement
+    encryption_manager.initialize(cert_name)
     # Chargement et préparation des données
     print("📁 Chargement des fichiers...")
     rh_paths = [p.strip() for p in rh_files.split(",")]

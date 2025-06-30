@@ -2,24 +2,32 @@ import pandas as pd
 from datetime import datetime
 import os
 from core.text_utils import is_semantic_change
-
 from resource_path import persistent_data_path
+from security.encryption import encryption_manager
 
 CSV_VARIATIONS = persistent_data_path("variations_profils.csv")
 CSV_CHANGEMENTS = persistent_data_path("changements_profils.csv")
 CSV_WHITELIST = persistent_data_path("profils_valides.csv")
 
 def charger_variations_profils(path=CSV_VARIATIONS):
-    """Charger les variations d'écriture connues"""
-    if not os.path.exists(path):
+    """Charger les variations d'écriture connues avec déchiffrement"""
+    if not encryption_manager.is_initialized():
+        # Fallback: charger en mode non chiffré si pas initialisé
+        if os.path.exists(path):
+            return pd.read_csv(path)
         return pd.DataFrame(columns=["profil_extraction", "profil_rh", "date_validation", "certificateur", "type_variation"])
-    return pd.read_csv(path)
+    
+    return encryption_manager.load_encrypted_csv(path)
 
 def charger_changements_profils(path=CSV_CHANGEMENTS):
-    """Charger les changements réels validés"""
-    if not os.path.exists(path):
+    """Charger les changements réels validés avec déchiffrement"""
+    if not encryption_manager.is_initialized():
+        # Fallback: charger en mode non chiffré si pas initialisé
+        if os.path.exists(path):
+            return pd.read_csv(path)
         return pd.DataFrame(columns=["profil_extraction", "profil_rh", "date_validation", "certificateur", "type_changement"])
-    return pd.read_csv(path)
+    
+    return encryption_manager.load_encrypted_csv(path)
 
 def charger_profils_valides(path=CSV_WHITELIST):
     """Charger tous les profils validés (compatibilité)"""
@@ -72,7 +80,7 @@ def ajouter_profil_valide(row, certificateur, path=CSV_WHITELIST):
         ajouter_changement_profil(row, certificateur)
 
 def ajouter_variation_profil(row, certificateur, path=CSV_VARIATIONS):
-    """Ajouter une variation d'écriture"""
+    """Ajouter une variation d'écriture avec chiffrement"""
     variations = charger_variations_profils(path)
     nv = {
         "profil_extraction": row['profil'],
@@ -83,10 +91,15 @@ def ajouter_variation_profil(row, certificateur, path=CSV_VARIATIONS):
     }
     variations = pd.concat([variations, pd.DataFrame([nv])], ignore_index=True)
     variations.drop_duplicates(subset=['profil_extraction', 'profil_rh'], inplace=True)
-    variations.to_csv(path, index=False)
+    
+    # Sauvegarder avec chiffrement si disponible
+    if encryption_manager.is_initialized():
+        encryption_manager.save_encrypted_csv(variations, path)
+    else:
+        variations.to_csv(path, index=False)
 
 def ajouter_changement_profil(row, certificateur, type_changement="evolution", path=CSV_CHANGEMENTS):
-    """Ajouter un changement réel"""
+    """Ajouter un changement réel avec chiffrement"""
     changements = charger_changements_profils(path)
     nv = {
         "profil_extraction": row['profil'],
@@ -97,7 +110,12 @@ def ajouter_changement_profil(row, certificateur, type_changement="evolution", p
     }
     changements = pd.concat([changements, pd.DataFrame([nv])], ignore_index=True)
     changements.drop_duplicates(subset=['profil_extraction', 'profil_rh'], inplace=True)
-    changements.to_csv(path, index=False)
+    
+    # Sauvegarder avec chiffrement si disponible
+    if encryption_manager.is_initialized():
+        encryption_manager.save_encrypted_csv(changements, path)
+    else:
+        changements.to_csv(path, index=False)
 
 def est_changement_profil_valide(row, profils_valides=None):
     """Vérifier si un changement est déjà validé"""
