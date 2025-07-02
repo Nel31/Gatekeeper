@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QMessageBox, QSizePolicy, QDialog)
 from PyQt6.QtCore import Qt, QTimer, QSettings
 from PyQt6.QtGui import QAction, QFont
+from PyQt6.QtWidgets import QApplication
 
 from ui.styles import (MAIN_STYLE, STEP_ACTIVE_STYLE, STEP_COMPLETED_STYLE, 
                       STEP_INACTIVE_STYLE, STEP_TEXT_ACTIVE_STYLE, 
@@ -18,12 +19,16 @@ from ui.pages.loading_page import LoadingPage
 from ui.pages.anomalies_page import AnomaliesPage
 from ui.pages.validation_page import ValidationPage
 from ui.pages.report_page import ReportPage
+from ui.pages.login_page import LoginWindow
 from ui.threads.processing_thread import ProcessingThread
 from ui.utils import (save_recent_files, load_recent_files, show_about_dialog,
                      show_documentation_dialog, show_question_message, 
                      show_error_message)
 from ui.dialogs.clear_data_dialog import ClearDataDialog
 from resource_path import persistent_data_path
+from security.auth.auth_manager import auth_manager
+from security.auth.user_store import user_store
+from security.encryption import encryption_manager
 
 
 class CertificateurApp(QMainWindow):
@@ -33,8 +38,7 @@ class CertificateurApp(QMainWindow):
         super().__init__()
         self.setup_window()
         self.setup_variables()
-        self.setup_ui()
-        self.load_recent_files_menu()
+        self.check_authentication()
     
     def setup_window(self):
         """Configurer la fenêtre principale"""
@@ -59,6 +63,63 @@ class CertificateurApp(QMainWindow):
         # Timer pour les messages temporaires
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(lambda: self.status_label.setText("Prêt"))
+    
+    def check_authentication(self):
+        """Vérifier l'authentification et afficher la fenêtre de login si nécessaire"""
+        if not auth_manager.is_authenticated():
+            self.show_login_window()
+        else:
+            # Utilisateur déjà authentifié, continuer
+            self.initialize_after_auth()
+    
+    def show_login_window(self):
+        """Afficher la fenêtre de connexion"""
+        self.login_window = LoginWindow()
+        self.login_window.login_successful.connect(self.on_login_successful)
+        self.login_window.login_cancelled.connect(self.on_login_cancelled)
+        
+        # Masquer la fenêtre principale pendant la connexion
+        self.hide()
+        
+        # Afficher la fenêtre de login
+        self.login_window.show()
+    
+    def on_login_successful(self, username):
+        """Gérer la connexion réussie"""
+        print(f"✅ Connexion réussie pour: {username}")
+        
+        # Initialiser le chiffrement avec l'utilisateur connecté
+        encryption_manager.initialize(username)
+        
+        # Fermer la fenêtre de login
+        if hasattr(self, 'login_window'):
+            self.login_window.close()
+            delattr(self, 'login_window')
+        
+        # Afficher la fenêtre principale
+        self.show()
+        
+        # Continuer l'initialisation
+        self.initialize_after_auth()
+        
+        # Afficher message de bienvenue
+        self.show_status_message(f"Bienvenue {username}!", 3000)
+    
+    def on_login_cancelled(self):
+        """Gérer l'annulation de la connexion"""
+        print("❌ Connexion annulée")
+        
+        # Fermer la fenêtre de login si elle existe
+        if hasattr(self, 'login_window'):
+            self.login_window.close()
+        
+        # Fermer l'application
+        QApplication.quit()
+    
+    def initialize_after_auth(self):
+        """Initialiser l'interface après authentification"""
+        self.setup_ui()
+        self.load_recent_files_menu()
     
     def setup_ui(self):
         """Configurer l'interface utilisateur"""
@@ -167,6 +228,26 @@ class CertificateurApp(QMainWindow):
         self.recent_menu = file_menu.addMenu('Fichiers récents')
         
         file_menu.addSeparator()
+        
+        # NOUVEAU: Information utilisateur
+        user_info = auth_manager.get_session_info()
+        if user_info.get('authenticated'):
+            user_action = QAction(f"👤 Connecté: {user_info['user']}", self)
+            user_action.setEnabled(False)
+            file_menu.addAction(user_action)
+            
+            session_action = QAction(f"⏱️ Session: {user_info.get('remaining_minutes', 0):.0f} min", self)
+            session_action.setEnabled(False)
+            file_menu.addAction(session_action)
+            
+            file_menu.addSeparator()
+            
+            # Déconnexion
+            logout_action = QAction('🚪 Se déconnecter', self)
+            logout_action.triggered.connect(self.logout)
+            file_menu.addAction(logout_action)
+            
+            file_menu.addSeparator()
         
         # Effacer les données mémorisées
         clear_data_action = QAction('Effacer les données mémorisées...', self)
@@ -293,7 +374,13 @@ class CertificateurApp(QMainWindow):
     
     def process_data(self):
         """Lancer le traitement des données"""
-        self.certificateur = self.loading_page.get_certificateur()
+        if not auth_manager.is_authenticated():
+            self.show_login_window()
+            return
+        
+        auth_manager.refresh_session()
+        
+        self.certificateur = auth_manager.get_current_user()
         
         # Animation du bouton
         self.loading_page.process_button.setText("⏳ Traitement en cours...")
@@ -471,6 +558,25 @@ class CertificateurApp(QMainWindow):
             
         except Exception as e:
             show_error_message(self, "Erreur", f"Impossible de charger la session:\n{str(e)}")
+
+    def logout(self):
+        """Déconnecter l'utilisateur"""
+        reply = QMessageBox.question(
+            self,
+            "Déconnexion",
+            "Voulez-vous vraiment vous déconnecter ?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            auth_manager.logout()
+            
+            # Masquer la fenêtre principale
+            self.hide()
+            
+            # Afficher la fenêtre de login
+            self.show_login_window()
 
     def closeEvent(self, event):
         reply = show_question_message(

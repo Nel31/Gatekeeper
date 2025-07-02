@@ -49,22 +49,11 @@ def main():
     app.setOrganizationName("Gatekeeper")
     app.setOrganizationDomain("gatekeeper.local")
     
-    # Définir l'icône de l'application (si disponible)
-    # app.setWindowIcon(QIcon('resources/icon.png'))
-    
-    # Créer et afficher la fenêtre principale
+    # Créer la fenêtre principale (mais ne pas l'afficher encore)
     window = CertificateurApp()
-    window.show()
     
-    # Centrer la fenêtre sur l'écran
-    try:
-        screen = app.primaryScreen().geometry()
-        window_geometry = window.geometry()
-        x = (screen.width() - window_geometry.width()) // 2
-        y = (screen.height() - window_geometry.height()) // 2
-        window.move(x, y)
-    except Exception as e:
-        print(f"Impossible de centrer la fenêtre: {e}")
+    # La fenêtre principale gèrera l'affichage de la login automatiquement
+    # Ne PAS faire window.show() ici
     
     # Message de bienvenue dans la console
     print("🌑 Certificateur de Comptes - Thème TRÈS SOMBRE Activé")
