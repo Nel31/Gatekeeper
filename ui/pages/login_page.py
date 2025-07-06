@@ -1,29 +1,36 @@
 """
-Fenêtre de connexion distincte
+Fenêtre de connexion réimplémentée sans margins/spacing, uniquement avec padding
 """
 
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QLineEdit, QPushButton, QFrame, QApplication)
-from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QRect, QTimer
+                            QLineEdit, QPushButton, QFrame, QApplication, QCheckBox,
+                            QGraphicsOpacityEffect)
+from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QRect, QTimer, QPoint
 from PyQt6.QtGui import QFont, QPalette, QColor
 from security.auth.auth_manager import auth_manager
 from security.auth.user_store import user_store
+from resource_path import persistent_data_path
+import os
+import json
+from datetime import datetime
 
 
 class LoginWindow(QMainWindow):
-    """Fenêtre de connexion distincte"""
+    """Fenêtre de connexion réimplémentée avec padding uniquement"""
     
-    login_successful = pyqtSignal(str)  # Émet le nom d'utilisateur
+    login_successful = pyqtSignal(str)
     login_cancelled = pyqtSignal()
     
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Certificateur de Comptes - Connexion")
-        self.setFixedSize(1000, 800)  # Mêmes dimensions que la fenêtre principale
+        self.setFixedSize(1000, 800)
         
         # Variables d'état
         self.failed_attempts = 0
         self.max_attempts = 3
+        self.password_visible = False
+        self.loading_index = 0
         
         self.setup_window_style()
         self.setup_ui()
@@ -39,125 +46,167 @@ class LoginWindow(QMainWindow):
         """)
     
     def setup_ui(self):
-        """Configurer l'interface de la fenêtre"""
-        # Widget central
+        """Configurer l'interface - tout en padding"""
+        # Widget central avec padding global
         central_widget = QWidget()
+        central_widget.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0a0a0a, 
+                    stop:0.3 #1a1a1a,
+                    stop:0.7 #0d0d0d,
+                    stop:1 #000000);
+                padding: 50px;
+            }
+        """)
         self.setCentralWidget(central_widget)
         
         # Layout principal
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # Arrière-plan principal
-        self.background_frame = QFrame()
-        self.background_frame.setStyleSheet("""
-            QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0a0a0a, 
-                    stop:0.3 #1a1a1a,
-                    stop:0.7 #0d0d0d,
-                    stop:1 #000000);
-                border: none;
+        # Container principal avec padding interne
+        main_container = QWidget()
+        main_container.setMaximumWidth(500)
+        main_container.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                padding: 0px;
             }
         """)
-        main_layout.addWidget(self.background_frame)
         
-        # Layout de l'arrière-plan
-        bg_layout = QVBoxLayout(self.background_frame)
-        bg_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        bg_layout.setContentsMargins(50, 50, 50, 50)
+        container_layout = QVBoxLayout(main_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
         
-        # En-tête avec logo/titre
-        self.create_header(bg_layout)
+        # Header
+        self.create_header_section(container_layout)
+        container_layout.addSpacing(20)
         
-        # Conteneur de connexion centré
-        self.create_login_container(bg_layout)
+        # Formulaire de connexion
+        self.create_login_form_section(container_layout)
+        container_layout.addSpacing(20)
         
-        # Pied de page
-        self.create_footer(bg_layout)
+        # Footer
+        self.create_footer_section(container_layout)
+        
+        main_layout.addWidget(main_container)
     
-    def create_header(self, parent_layout):
-        """Créer l'en-tête de la fenêtre"""
+    def create_header_section(self, parent_layout):
+        """Créer l'en-tête avec padding"""
         header_widget = QWidget()
-        header_layout = QVBoxLayout(header_widget)
-        header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.setSpacing(10)
+        header_widget.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                padding: 0px 0px 40px 0px;
+            }
+        """)
         
-        # Logo/Titre principal
-        title = QLabel("🔐 GATEKEEPER")
-        title.setFont(QFont("Arial", 32, QFont.Weight.Bold))
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("""
+        header_layout = QVBoxLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
+        
+        # Logo/Titre
+        title_label = QLabel("🔐 GATEKEEPER")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("""
             QLabel {
                 color: #800020;
-                margin-bottom: 10px;
+                font-size: 36px;
+                font-weight: bold;
+                padding: 0px 0px 10px 0px;
                 background: transparent;
             }
         """)
-        header_layout.addWidget(title)
+        header_layout.addWidget(title_label)
         
         # Sous-titre
-        subtitle = QLabel("Certificateur de Comptes")
-        subtitle.setFont(QFont("Arial", 18, QFont.Weight.Normal))
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setStyleSheet("""
+        subtitle_label = QLabel("Certificateur de Comptes")
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle_label.setStyleSheet("""
             QLabel {
                 color: #cccccc;
+                font-size: 18px;
+                padding: 0px;
                 background: transparent;
-                margin-bottom: 30px;
             }
         """)
-        header_layout.addWidget(subtitle)
+        header_layout.addWidget(subtitle_label)
         
         parent_layout.addWidget(header_widget)
     
-    def create_login_container(self, parent_layout):
-        """Créer le conteneur de connexion avec taille ajustée"""
-        # Conteneur principal centré - taille augmentée
-        container_widget = QWidget()
-        container_widget.setFixedSize(450, 420)  # Hauteur augmentée de 380 à 420
-        container_layout = QVBoxLayout(container_widget)
-        
-        # Cadre de connexion
-        self.login_frame = QFrame()
-        self.login_frame.setStyleSheet("""
+    def create_login_form_section(self, parent_layout):
+        """Créer le formulaire de connexion"""
+        # Container du formulaire avec style glass
+        self.form_container = QFrame()
+        self.form_container.setStyleSheet("""
             QFrame {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #2a2a2a, 
-                    stop:0.3 #1a1a1a,
-                    stop:0.7 #0d0d0d,
-                    stop:1 #0a0a0a);
+                    stop:0 rgba(42, 42, 42, 0.95), 
+                    stop:0.3 rgba(26, 26, 26, 0.9),
+                    stop:0.7 rgba(13, 13, 13, 0.85),
+                    stop:1 rgba(10, 10, 10, 0.8));
                 border: 2px solid #800020;
                 border-radius: 16px;
-                padding: 25px;
+                padding: 45px 40px;
             }
         """)
-        container_layout.addWidget(self.login_frame)
         
-        # Contenu du formulaire
-        self.create_login_form()
+        form_layout = QVBoxLayout(self.form_container)
+        form_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.setSpacing(0)
         
-        parent_layout.addWidget(container_widget, alignment=Qt.AlignmentFlag.AlignCenter)
+        # Champ utilisateur
+        self.create_username_field(form_layout)
+        form_layout.addSpacing(15)
+        
+        # Champ mot de passe
+        self.create_password_field(form_layout)
+        form_layout.addSpacing(8)
+        
+        # Indicateur Caps Lock
+        self.create_caps_lock_indicator(form_layout)
+        form_layout.addSpacing(10)
+        
+        # Checkbox Se souvenir
+        self.create_remember_checkbox(form_layout)
+        form_layout.addSpacing(15)
+        
+        # Message d'erreur
+        self.create_error_label(form_layout)
+        form_layout.addSpacing(10)
+        
+        # Boutons
+        self.create_buttons(form_layout)
+        
+        parent_layout.addWidget(self.form_container)
     
-    def create_login_form(self):
-        """Créer le formulaire de connexion avec espacement amélioré"""
-        layout = QVBoxLayout(self.login_frame)
-        layout.setContentsMargins(40, 45, 40, 45)  # Marges augmentées
+    def create_username_field(self, parent_layout):
+        """Créer le champ nom d'utilisateur"""
+        username_container = QWidget()
+        username_container.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                padding: 0px;
+            }
+        """)
         
-        # Champ nom d'utilisateur
+        username_layout = QVBoxLayout(username_container)
+        username_layout.setContentsMargins(0, 0, 0, 0)
+        username_layout.setSpacing(0)
+        
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("👤 Nom d'utilisateur")
-        self.username_input.setFixedHeight(50)
         self.username_input.setStyleSheet("""
             QLineEdit {
                 background-color: rgba(26, 26, 26, 0.9);
                 border: 2px solid #333333;
                 border-radius: 10px;
-                padding: 0 20px;
+                padding: 15px 20px;
                 font-size: 15px;
                 color: #ffffff;
-                margin-bottom: 15px;
             }
             QLineEdit:focus {
                 border: 2px solid #800020;
@@ -167,52 +216,198 @@ class LoginWindow(QMainWindow):
                 color: #888888;
             }
         """)
-        layout.addWidget(self.username_input)
+        username_layout.addWidget(self.username_input)
         
-        # Espacement supplémentaire entre les champs
-        layout.addSpacing(15)
+        parent_layout.addWidget(username_container)
+    
+    def create_password_field(self, parent_layout):
+        """Créer le champ mot de passe avec toggle"""
+        password_container = QWidget()
+        password_container.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                padding: 0px;
+            }
+        """)
         
-        # Champ mot de passe
+        password_layout = QVBoxLayout(password_container)
+        password_layout.setContentsMargins(0, 0, 0, 0)
+        password_layout.setSpacing(0)
+        
+        # Container pour le champ et le bouton
+        field_container = QWidget()
+        field_layout = QHBoxLayout(field_container)
+        field_layout.setContentsMargins(0, 0, 0, 0)
+        field_layout.setSpacing(0)
+        
         self.password_input = QLineEdit()
         self.password_input.setPlaceholderText("🔑 Mot de passe")
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.password_input.setFixedHeight(50)
-        self.password_input.setStyleSheet(self.username_input.styleSheet())
-        layout.addWidget(self.password_input)
+        self.password_input.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(26, 26, 26, 0.9);
+                border: 2px solid #333333;
+                border-radius: 10px;
+                border-top-right-radius: 0px;
+                border-bottom-right-radius: 0px;
+                padding: 15px 20px;
+                font-size: 15px;
+                color: #ffffff;
+            }
+            QLineEdit:focus {
+                border: 2px solid #800020;
+                background-color: rgba(26, 26, 26, 1.0);
+            }
+            QLineEdit::placeholder {
+                color: #888888;
+            }
+        """)
+        field_layout.addWidget(self.password_input)
         
-        # Espacement avant le message d'erreur
-        layout.addSpacing(20)
+        # Bouton toggle
+        self.password_toggle = QPushButton("👁")
+        self.password_toggle.setFixedWidth(50)
+        self.password_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.password_toggle.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(26, 26, 26, 0.9);
+                border: 2px solid #333333;
+                border-left: none;
+                border-top-right-radius: 10px;
+                border-bottom-right-radius: 10px;
+                padding: 15px 0px;
+                color: #999999;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: rgba(40, 40, 40, 0.9);
+                color: #ffffff;
+            }
+            QPushButton:pressed {
+                background-color: rgba(20, 20, 20, 0.9);
+                color: #800020;
+            }
+        """)
+        self.password_toggle.clicked.connect(self.toggle_password_visibility)
+        field_layout.addWidget(self.password_toggle)
         
-        # Message d'erreur
+        password_layout.addWidget(field_container)
+        parent_layout.addWidget(password_container)
+    
+    def create_caps_lock_indicator(self, parent_layout):
+        """Créer l'indicateur Caps Lock"""
+        self.caps_lock_warning = QLabel("⚠️ Caps Lock activé")
+        self.caps_lock_warning.setStyleSheet("""
+            QLabel {
+                color: #ffaa00;
+                font-size: 12px;
+                font-weight: bold;
+                background: transparent;
+                padding: 5px 0px 10px 0px;
+            }
+        """)
+        self.caps_lock_warning.setVisible(False)
+        parent_layout.addWidget(self.caps_lock_warning)
+    
+    def create_remember_checkbox(self, parent_layout):
+        """Créer la checkbox Se souvenir"""
+        checkbox_container = QWidget()
+        checkbox_container.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                padding: 0px;
+            }
+        """)
+        
+        checkbox_layout = QVBoxLayout(checkbox_container)
+        checkbox_layout.setContentsMargins(0, 0, 0, 0)
+        checkbox_layout.setSpacing(0)
+        
+        self.remember_checkbox = QCheckBox("Se souvenir de moi")
+        self.remember_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: #cccccc;
+                font-size: 13px;
+                padding: 0px;
+                background: transparent;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid #333333;
+                background-color: rgba(26, 26, 26, 0.9);
+            }
+            QCheckBox::indicator:checked {
+                background-color: #800020;
+                border: 2px solid #800020;
+            }
+            QCheckBox::indicator:hover {
+                border: 2px solid #A52A2A;
+            }
+        """)
+        checkbox_layout.addWidget(self.remember_checkbox)
+        
+        parent_layout.addWidget(checkbox_container)
+    
+    def create_error_label(self, parent_layout):
+        """Créer le label d'erreur"""
+        error_container = QWidget()
+        error_container.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                padding: 0px;
+            }
+        """)
+        
+        error_layout = QVBoxLayout(error_container)
+        error_layout.setContentsMargins(0, 0, 0, 0)
+        error_layout.setSpacing(0)
+        
         self.error_label = QLabel("")
         self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.error_label.setFixedHeight(30)  # Hauteur augmentée
         self.error_label.setStyleSheet("""
             QLabel {
                 color: #ff5555;
                 font-size: 13px;
                 font-weight: bold;
-                background: transparent;
+                background: rgba(60, 20, 20, 0.5);
+                border-radius: 6px;
+                padding: 8px;
             }
         """)
-        layout.addWidget(self.error_label)
+        self.error_label.setVisible(False)
+        error_layout.addWidget(self.error_label)
         
-        # Espacement avant les boutons
-        layout.addSpacing(25)
+        parent_layout.addWidget(error_container)
+    
+    def create_buttons(self, parent_layout):
+        """Créer les boutons"""
+        buttons_container = QWidget()
+        buttons_container.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                padding: 0px;
+            }
+        """)
         
-        # Boutons
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(25)  # Espacement entre boutons augmenté
+        buttons_layout = QHBoxLayout(buttons_container)
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_layout.setSpacing(0)
         
         # Bouton Quitter
+        quit_container = QWidget()
+        quit_container.setStyleSheet("padding: 0px 12px 0px 0px; background: transparent;")
+        quit_layout = QVBoxLayout(quit_container)
+        quit_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.quit_button = QPushButton("Quitter")
-        self.quit_button.setFixedHeight(45)
-        self.quit_button.setFixedWidth(120)
         self.quit_button.setStyleSheet("""
             QPushButton {
                 background-color: #333333;
                 border: 1px solid #555555;
                 border-radius: 8px;
+                padding: 12px 30px;
                 color: #ffffff;
                 font-size: 14px;
                 font-weight: 600;
@@ -226,17 +421,28 @@ class LoginWindow(QMainWindow):
             }
         """)
         self.quit_button.clicked.connect(self.on_quit)
-        buttons_layout.addWidget(self.quit_button)
+        quit_layout.addWidget(self.quit_button)
+        
+        buttons_layout.addWidget(quit_container)
+        
+        # Spacer
+        spacer = QWidget()
+        spacer.setStyleSheet("background: transparent;")
+        buttons_layout.addWidget(spacer, 1)
         
         # Bouton Connexion
+        login_container = QWidget()
+        login_container.setStyleSheet("padding: 0px 0px 0px 12px; background: transparent;")
+        login_layout = QVBoxLayout(login_container)
+        login_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.login_button = QPushButton("Se connecter")
-        self.login_button.setFixedHeight(45)
-        self.login_button.setFixedWidth(150)
         self.login_button.setStyleSheet("""
             QPushButton {
                 background-color: #800020;
                 border: none;
                 border-radius: 8px;
+                padding: 12px 40px;
                 color: #ffffff;
                 font-size: 14px;
                 font-weight: bold;
@@ -254,48 +460,42 @@ class LoginWindow(QMainWindow):
         """)
         self.login_button.clicked.connect(self.on_login)
         self.login_button.setDefault(True)
-        buttons_layout.addWidget(self.login_button)
+        login_layout.addWidget(self.login_button)
         
-        layout.addLayout(buttons_layout)
+        buttons_layout.addWidget(login_container)
         
-        # Événements clavier
-        self.username_input.returnPressed.connect(self.password_input.setFocus)
-        self.password_input.returnPressed.connect(self.on_login)
+        parent_layout.addWidget(buttons_container)
     
-    def create_footer(self, parent_layout):
+    def create_footer_section(self, parent_layout):
         """Créer le pied de page"""
         footer_widget = QWidget()
-        footer_layout = QVBoxLayout(footer_widget)
-        footer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        footer_layout.setSpacing(5)
-        
-        # Informations par défaut
-        default_info = QLabel("💡 Utilisateur par défaut: admin | Mot de passe: admin123")
-        default_info.setFont(QFont("Arial", 12))
-        default_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        default_info.setStyleSheet("""
-            QLabel {
-                color: #666666;
+        footer_widget.setStyleSheet("""
+            QWidget {
                 background: transparent;
-                margin-top: 20px;
+                padding: 40px 0px 0px 0px;
             }
         """)
-        footer_layout.addWidget(default_info)
         
-        # Version
+        footer_layout = QVBoxLayout(footer_widget)
+        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout.setSpacing(0)
+        
+        # Version seulement (suppression du label info)
         version_label = QLabel("Gatekeeper v2.0 - Certificateur de Comptes")
-        version_label.setFont(QFont("Arial", 10))
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("""
             QLabel {
                 color: #555555;
+                font-size: 10px;
+                padding: 0px;
                 background: transparent;
-                margin-top: 5px;
             }
         """)
         footer_layout.addWidget(version_label)
         
         parent_layout.addWidget(footer_widget)
+    
+    # === Méthodes fonctionnelles ===
     
     def center_window(self):
         """Centrer la fenêtre sur l'écran"""
@@ -305,39 +505,75 @@ class LoginWindow(QMainWindow):
         y = (screen.height() - window_geometry.height()) // 2
         self.move(x, y)
     
+    def toggle_password_visibility(self):
+        """Basculer la visibilité du mot de passe"""
+        if self.password_visible:
+            self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+            self.password_toggle.setText("👁")
+        else:
+            self.password_input.setEchoMode(QLineEdit.EchoMode.Normal)
+            self.password_toggle.setText("👁‍🗨")
+        self.password_visible = not self.password_visible
+    
     def showEvent(self, event):
         """Événement d'affichage"""
         super().showEvent(event)
-        # Focus sur le premier champ
-        QTimer.singleShot(100, self.username_input.setFocus)
+        self.load_remember_preference()
+        
+        # Connecter les événements
+        self.username_input.returnPressed.connect(self.password_input.setFocus)
+        self.password_input.returnPressed.connect(self.on_login)
+        self.password_input.textChanged.connect(self.check_caps_lock_state)
+        
+        # Focus initial
+        if not self.username_input.text():
+            QTimer.singleShot(100, self.username_input.setFocus)
+        else:
+            QTimer.singleShot(100, self.password_input.setFocus)
+    
+    def check_caps_lock_state(self):
+        """Vérifier l'état du Caps Lock"""
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            self.caps_lock_warning.setVisible(True)
+        else:
+            self.caps_lock_warning.setVisible(False)
     
     def on_login(self):
         """Gérer la tentative de connexion"""
         username = self.username_input.text().strip()
         password = self.password_input.text()
         
-        # Validation des champs
-        if not username or not password:
-            self.show_error("Veuillez renseigner tous les champs")
+        # Effacer l'erreur précédente
+        self.clear_error()
+        
+        # Validation
+        if not username:
+            self.show_field_error(self.username_input, "Nom d'utilisateur requis")
+            return
+        if not password:
+            self.show_field_error(self.password_input, "Mot de passe requis")
             return
         
-        # Vérifier si le compte est verrouillé
+        # Vérifier le verrouillage
         if auth_manager.is_account_locked(username):
-            self.show_error("Compte temporairement verrouillé (15 min)")
+            self.show_error("Compte verrouillé. Réessayez dans 15 minutes.")
             return
         
-        # Désactiver le bouton pendant la vérification
+        # Animation de chargement
         self.login_button.setEnabled(False)
-        self.login_button.setText("Vérification...")
+        self.create_loading_animation()
         
-        # Délai pour simulation du traitement
+        # Traitement
         QTimer.singleShot(500, lambda: self.process_login(username, password))
     
     def process_login(self, username, password):
-        """Traiter la connexion après délai"""
-        # Tentative d'authentification
+        """Traiter la connexion"""
+        self.stop_loading_animation()
+        
         if auth_manager.authenticate(username, password, user_store):
             self.clear_error()
+            self.save_remember_preference(username)
             self.login_successful.emit(username)
             self.close()
         else:
@@ -351,13 +587,102 @@ class LoginWindow(QMainWindow):
                 QTimer.singleShot(2000, self.force_quit)
                 return
             
-            # Réactiver le bouton
             self.login_button.setEnabled(True)
-            self.login_button.setText("Se connecter")
-            
-            # Vider le mot de passe
             self.password_input.clear()
             self.password_input.setFocus()
+    
+    def show_error(self, message):
+        """Afficher un message d'erreur"""
+        self.error_label.setText(message)
+        self.error_label.setVisible(True)
+        
+        # Animation fade in CORRIGÉE
+        effect = QGraphicsOpacityEffect()
+        self.error_label.setGraphicsEffect(effect)
+        self.fade_animation = QPropertyAnimation(effect, b"opacity")
+        self.fade_animation.setDuration(300)
+        self.fade_animation.setStartValue(0)
+        self.fade_animation.setEndValue(1)
+        self.fade_animation.start()
+    
+    def clear_error(self):
+        """Effacer le message d'erreur"""
+        self.error_label.setText("")
+        self.error_label.setVisible(False)
+    
+    def show_field_error(self, field, message):
+        """Afficher une erreur sur un champ spécifique"""
+        self.show_error(message)
+        
+        # Animation de secousse
+        self.shake_field(field)
+        
+        # Bordure rouge temporaire
+        original_style = field.styleSheet()
+        field.setStyleSheet(original_style.replace("#333333", "#ff3333"))
+        QTimer.singleShot(2000, lambda: field.setStyleSheet(original_style))
+    
+    def shake_field(self, field):
+        """Animation de secousse pour un champ"""
+        original_pos = field.pos()
+        
+        animation = QPropertyAnimation(field, b"pos")
+        animation.setDuration(500)
+        animation.setKeyValueAt(0, original_pos)
+        animation.setKeyValueAt(0.1, original_pos + QPoint(10, 0))
+        animation.setKeyValueAt(0.2, original_pos + QPoint(-10, 0))
+        animation.setKeyValueAt(0.3, original_pos + QPoint(10, 0))
+        animation.setKeyValueAt(0.4, original_pos + QPoint(-10, 0))
+        animation.setKeyValueAt(0.5, original_pos)
+        animation.setEasingCurve(QEasingCurve.Type.OutElastic)
+        animation.start()
+    
+    def create_loading_animation(self):
+        """Créer l'animation de chargement"""
+        loading_text = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+        self.loading_index = 0
+        
+        def update_loading():
+            if hasattr(self, 'loading_timer') and self.loading_timer.isActive():
+                self.login_button.setText(f"Connexion {loading_text[self.loading_index % len(loading_text)]}")
+                self.loading_index += 1
+        
+        self.loading_timer = QTimer()
+        self.loading_timer.timeout.connect(update_loading)
+        self.loading_timer.start(100)
+    
+    def stop_loading_animation(self):
+        """Arrêter l'animation de chargement"""
+        if hasattr(self, 'loading_timer'):
+            self.loading_timer.stop()
+        self.login_button.setText("Se connecter")
+    
+    def save_remember_preference(self, username):
+        """Sauvegarder la préférence"""
+        if self.remember_checkbox.isChecked():
+            settings_file = persistent_data_path("login_preferences.json")
+            preferences = {
+                "remember": True,
+                "username": username,
+                "timestamp": datetime.now().isoformat()
+            }
+            with open(settings_file, 'w') as f:
+                json.dump(preferences, f)
+    
+    def load_remember_preference(self):
+        """Charger la préférence"""
+        settings_file = persistent_data_path("login_preferences.json")
+        if os.path.exists(settings_file):
+            try:
+                with open(settings_file, 'r') as f:
+                    preferences = json.load(f)
+                if preferences.get("remember"):
+                    self.username_input.setText(preferences.get("username", ""))
+                    self.remember_checkbox.setChecked(True)
+                    return True
+            except:
+                pass
+        return False
     
     def on_quit(self):
         """Gérer la fermeture"""
@@ -365,80 +690,9 @@ class LoginWindow(QMainWindow):
         self.close()
     
     def force_quit(self):
-        """Forcer la fermeture après trop de tentatives"""
+        """Forcer la fermeture"""
         self.login_cancelled.emit()
         QApplication.quit()
-    
-    def show_error(self, message):
-        """Afficher un message d'erreur"""
-        self.error_label.setText(message)
-        
-        # Style d'erreur pour les champs
-        error_style = """
-            QLineEdit {
-                background-color: rgba(60, 20, 20, 0.9);
-                border: 2px solid #ff5555;
-                border-radius: 10px;
-                padding: 0 20px;
-                font-size: 15px;
-                color: #ffffff;
-            }
-            QLineEdit:focus {
-                border: 2px solid #ff3333;
-                background-color: rgba(60, 20, 20, 1.0);
-            }
-            QLineEdit::placeholder {
-                color: #888888;
-            }
-        """
-        self.username_input.setStyleSheet(error_style)
-        self.password_input.setStyleSheet(error_style)
-        
-        # Animation de secousse (optionnelle)
-        self.shake_animation()
-    
-    def shake_animation(self):
-        """Animation de secousse pour le formulaire"""
-        self.animation = QPropertyAnimation(self.login_frame, b"geometry")
-        self.animation.setDuration(500)
-        self.animation.setEasingCurve(QEasingCurve.Type.OutBounce)
-        
-        original_geometry = self.login_frame.geometry()
-        shaken_geometry = QRect(
-            original_geometry.x() + 10,
-            original_geometry.y(),
-            original_geometry.width(),
-            original_geometry.height()
-        )
-        
-        self.animation.setStartValue(shaken_geometry)
-        self.animation.setEndValue(original_geometry)
-        self.animation.start()
-    
-    def clear_error(self):
-        """Effacer le message d'erreur"""
-        self.error_label.setText("")
-        
-        # Restaurer le style normal
-        normal_style = """
-            QLineEdit {
-                background-color: rgba(26, 26, 26, 0.9);
-                border: 2px solid #333333;
-                border-radius: 10px;
-                padding: 0 20px;
-                font-size: 15px;
-                color: #ffffff;
-            }
-            QLineEdit:focus {
-                border: 2px solid #800020;
-                background-color: rgba(26, 26, 26, 1.0);
-            }
-            QLineEdit::placeholder {
-                color: #888888;
-            }
-        """
-        self.username_input.setStyleSheet(normal_style)
-        self.password_input.setStyleSheet(normal_style)
     
     def keyPressEvent(self, event):
         """Gérer les événements clavier"""
@@ -449,7 +703,6 @@ class LoginWindow(QMainWindow):
     
     def closeEvent(self, event):
         """Gérer la fermeture de la fenêtre"""
-        # Émettre le signal d'annulation si pas de connexion réussie
         if not auth_manager.is_authenticated():
             self.login_cancelled.emit()
         super().closeEvent(event)
